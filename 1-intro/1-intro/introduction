@@ -1,0 +1,100 @@
+1.网络应用模型
+When writing programs that communicate across a computer network, one must
+first invent a protocol, an agreement on how those programs will
+communicate.
+
+A web server is typically thought of as a long-running program (as daemon)
+that sends network messages only in response to requests coming in form the
+network. The other side of the protocol is a Web client, such as a brower,
+which always initiates communication with the server. This organization
+into client and server is used by most network-aware applications.
+
+        Figure 1.1. Network application: client and server.
+          ----------  application protocol   ----------
+          | client |<----------------------->| server |
+          ----------                         ----------
+
+Clients normally communicate with one server at a time, although using a
+Web browser as an example, we might communicate with many different Web
+servers over, say, a 10-minute time period. But from the server's
+perspective, at any given point in time, it is not unusual for a server to
+be communicating with multiple clients.
+
+2.网络协议分层
+The client application and the server application may be thought of as
+communicating via a network protocol, but actually, multiple layers of
+network protocols are typically involved. In this text, we focus on the
+TCP/IP protocol suite, also called the Internet protocol suite. For example,
+Web clients and servers communicate using the Transmission Control Protocol,
+or TCP. TCP, in turn, uses the Internet Protocol, or IP, and IP communicates
+witch a datalink layer of some form. If the client and server are on the
+same Ethernet, we would have the arrangement shown in Figure 1.3.
+
+ Figure 1.3. Client and server on the same Ethernet communicating using TCP
+         ----------                      ---------
+ user    | Web    | application protocol | Web    |  application layer
+ process | client |<-------------------->| server |
+         ----------                      ----------
+           ^    ^                         ^   ^
+           |    !                         !   |
+           v    !                         !   v
+         ----------     TCP protocol     ----------
+         |  TCP ! |<-------------------->|!  TCP  | transport layer
+         ----------                      ----------
+ protocol  ^    !                         !   ^
+ stack     |    !                         !   |
+ within    v    !                         !   v
+ Kernel  ----------      IP protocol     ----------
+         | IP  !  |<-------------------->|!  IP   | network layer
+         ----------                      ----------
+           ^    !                         ^   ^
+           |    !                         !   |
+           v    !                         !   v
+     -------------  Ethernet protocol   -------------
+     | Ethernet !|<-------------------->| !Ethernet | datalink layer
+     |  driver  !|                      | ! driver  |
+     -------------                      -------------
+           |    ! actual flow between     !   |
+           |    ! client and server       !   |
+           |    ~~~~~~~~~~~~~~~~~~~~~~~~~~~   |
+           |                                  |
+   --------------------------------------------------------
+                        Ethernet
+如图所示, 以太网属于数据链路层的协议.
+Even though the client and server communicate using an application protocol,
+the transport layers communicate using TCP. Note that the actual flow of
+information between the client and server goes down the protocol stack on
+one side, across the network, and up the protocol stack on the other side.
+Also note that the client and server are typically user processes, while
+the TCP and IP are normally part of the protocol stack within the kernel.
+
+3.路由和广域网
+The client and server need not be attached to the same local area network
+(LAN) as we show in Figure 1.3. For instance, in Figure 1.4, we show the
+client and server on different LANs, with both LANs connected to a wide
+area network (WAN) using routers.
+
+  Figure 1.4. Client and server on different LANs connected through a WAN.
+  ---------------                             ---------------
+  |   client    |                             |   client    |
+  | application |                             | application |
+  ---------------                             ---------------
+        |                                           |
+  ---------------                             ---------------
+  |  host with  |                             |  host with  |
+  |   TCP/IP    |                             |   TCP/IP    |
+  ---------------                             ---------------
+        |                                           |
+---------------------                       ---------------------
+           LAN     |                         |            LAN
+               ----------                ----------                   
+              /| router |                | router |                   
+            /  ----------                ----------                   
+        WAN        |                         |                        
+            \  ----------   ----------   ----------
+              \| router |---| router |---| router |
+               ----------   ----------   ----------
+
+Routers are the building blocks of WANs. The largest WAN today is the
+Internet. Many companies build their own WANs and these private WANs may or
+may not be connected to the Internet. 路由是广域网的基本组成部分.
