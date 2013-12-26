@@ -3,6 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <sys/socket.h>
 
 static void err_doit(int, int, const char *, va_list);
 
@@ -59,10 +61,10 @@ void err_quit(const char *fmt, ...)
 /* Print message and return to caller
  * Caller specifies "errnoflag"
  */
-static void err_doit(int error, int errnoflag, const char *fmt, va_list ap)
+static void err_doit(int errnoflag, int error, const char *fmt, va_list ap)
 {
     char buf[BUFSIZ];
-    
+
     vsnprintf(buf, BUFSIZ - 1, fmt, ap);
     if (errnoflag)
         snprintf(buf + strlen(buf), BUFSIZ - strlen(buf) - 1,
@@ -72,4 +74,46 @@ static void err_doit(int error, int errnoflag, const char *fmt, va_list ap)
     fflush(stdout);     /* in case stdout and stderr are the same */
     fputs(buf, stderr);
     fflush(NULL);       /* flushes all stdin output streams */
+}
+
+int Socket(int domain, int type, int protocol)
+{
+    int n;
+
+    if ((n = socket(domain, type, protocol)) < 0)
+        err_sys("socket error");
+    return n;
+}
+
+void Bind(int sockfd, const struct sockaddr *addr, socklen_t len)
+{
+    if (bind(sockfd, addr, len) < 0)
+        err_sys("bind error");
+}
+
+void Listen(int fd, int backlog)
+{
+    if (listen(fd, backlog) < 0)
+        err_sys("listen error");
+}
+
+int Accept(int sockfd, struct sockaddr *addr, socklen_t *len)
+{
+    int n;
+
+    if ((n = accept(sockfd, addr, len)) < 0)
+        err_sys("accept error");
+    return n;
+}
+
+void Write(int fd, const void *buf, size_t count)
+{
+    if (write(fd, buf, count) != count)
+        err_sys("write error");
+}
+
+void Close(int fd)
+{
+    if (close(fd) == -1)
+        err_sys("close error");
 }

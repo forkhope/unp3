@@ -9,16 +9,14 @@
 /* This is an implementation of a TCP time-of-day client. This client
  * establishes a TCP connection with a server and the server simply sends
  * back the current time and date in a human-readable format.
- *
- * This program is protocol-dependent on IPv4. We allocate and initialize
- * a sockaddr_in structure, we set the family of this structure to AF_INET,
- * and we specify the first argument to socket() as AF_INET.
+ * 
+ * 下面将这个程序改成IPv6版本的,主要是改动结构体和结构体成员的名字.
  */
 int main(int argc, char *argv[])
 {
     int sockfd, n;
     char recvline[BUFSIZ];
-    struct sockaddr_in servaddr;
+    struct sockaddr_in6 servaddr;
 
     if (argc != 2) {
         err_quit("Usage: %s IP-address", argv[0]);
@@ -30,7 +28,7 @@ int main(int argc, char *argv[])
      * function returns a small integer descriptor that we can use to
      * identify the socket in all future function calls.
      */
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
         err_sys("socket AF_INET SOCK_STREAM error");
 
     /* 2.填充 socket 地址结构体
@@ -48,9 +46,9 @@ int main(int argc, char *argv[])
      * argument (for example, 192.168.1.88) into the proper format.
      */
     memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(13);      /* daytime server */
-    if (inet_pton(AF_INET, argv[1], &servaddr.sin_addr) <= 0) {
+    servaddr.sin6_family = AF_INET6;
+    servaddr.sin6_port = htons(13);      /* daytime server */
+    if (inet_pton(AF_INET6, argv[1], &servaddr.sin6_addr) <= 0) {
         err_sys("inet_pton error for: %s\n", argv[1]);
     }
 
