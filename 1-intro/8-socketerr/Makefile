@@ -14,5 +14,7 @@ $(BIN): $(OBJS) ../../0-common/common.o
 clean:
 	rm -f $(OBJS)
 
+# 下面的210.0.235.14是网上找到的香港授时中心官方时间服务器ip地址
 do:
 	echo -e '\033[31mRUN THE PROGRAM!!!\033[0m'
+	./daytimecli 210.0.235.14

@@ -1,0 +1,17 @@
+书中练习1.5提到: Change the single call to write() into a loop that calls
+write() for each byte of the result string. 例如:
+    for (i = 0; i < strlen(buff); i++)
+        Write(connfd, &buff[i], 1);
+那么,客户端在用 while 循环读取服务器过来的数据时,客户端会执行多少次循环?
+
+书中给出的答案是: 视情况而定.
+The results vary, depending on the client host and server host. If the
+client and server are on the same host, the counter is normally 1, which
+means even though the server does 26 writes, the data is returned by a
+single read(). But, one combination of client and esrver may produce two
+packets, and another combination 26 packets.
+
+The purpose of this example is to reiterate that different TCPs do
+differrent things with the data and our application must be prepared to
+read the data as a stream of bytes until the end of the data stream is
+encountered.

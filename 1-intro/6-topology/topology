@@ -1,0 +1,44 @@
+You may need to know your own network topology to run the examples and
+exercises on your own network. Although there are no current Unix standards
+with regard to network configuration and administration, two basic commands
+are provided by most Unix systems and can be used to discover some details
+of a network: netstat and ifconfig.
+
+1. netstat -i provides information on the interfaces. We also specify the
+-n flag to print numeric addresses, instead of trying to find names for
+the networks. This shows us the interfaces and their names.
+john:~$netstat -ni
+Kernel Interface table
+Iface   MTU Met   RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+eth0       1500 0   1547923      0      0 0       1057582      0      0      0 BMRU
+lo        16436 0      3321      0      0 0          3321      0      0      0 LRU
+
+The loopback interface is called lo and the Ethernet is called eth0.
+
+2. netstat -r shows the routing table, which is another way to determine
+the interfaces. We normally specify the -n flag to print numeric addresses.
+This also shows the IP address of the default router.
+john:~$netstat -nr
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG        0 0          0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U         0 0          0 eth0
+
+3. Given the interface names, we execute ifconfig to obtain the details
+for each interface.
+john:~$sudo ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 74:27:ea:20:d7:f8  
+          inet addr:192.168.1.118  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: fe80::7627:eaff:fe20:d7f8/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:1548113 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:1057660 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:1896110885 (1.7 GiB)  TX bytes:126191498 (120.3 MiB)
+          Interrupt:42 Base address:0x2000 
+
+This shows the IP address, subnet mask, and broadcast address. The
+MULTICAST flag is often an indication that the host supports multicasting.
+
+可以注意到,书中提到网络拓扑(network topology)时,使用 netstat 命令打印了
+内核接口表和路由表. 也就是说,这两者之间存在关联?

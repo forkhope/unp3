@@ -6,30 +6,54 @@
 #include <arpa/inet.h>  /* inet_pton(), htons() */
 #include "common.h"     /* err_sys(), err_quit() */
 
-/* This is an implementation of a TCP time-of-day client. This client
- * establishes a TCP connection with a server and the server simply sends
- * back the current time and date in a human-readable format.
- *
- * 下面将这个程序改成IPv6版本的,主要是改动结构体和结构体成员的名字.
+/* Modify the first argument to socket() in Figure 1.5 to be 9999. Compile
+ * and run the program. What happens? Find the errno value corresponding
+ * to the error that is printed. How can you find more information on this
+ * error?
  */
 int main(int argc, char *argv[])
 {
     int sockfd, n;
     char recvline[BUFSIZ];
-    struct sockaddr_in6 servaddr;
+    struct sockaddr_in servaddr;
 
     if (argc != 2) {
         err_quit("Usage: %s IP-address", argv[0]);
     }
+    
 
-    /* 1.创建一个socket
-     * The socket() function creates an Internet (AF_INET) stream
-     * (SOCK_STREAM) socket, which is a fancy name for a TCP socket. The
-     * function returns a small integer descriptor that we can use to
-     * identify the socket in all future function calls.
+    /* 打印出来 AF_INET 的值是 2. 换句话说, socket(AF_INET, SOCK_STREAM, 0)
+     * 和 socket(2, SOCK_STREAM, 0)的效果完全是一样的,但由于没有哪个AF_*宏
+     * 的值是 9999, 所以下面第一个参数写成 9999 会报错,打印的错误信息为:
+     * socket 9999 error: Address family not supported by protocol
+     *
+     * 查看 man errno 手册,可以发现该错误描述对应的错误码是EAFNOSUPPORT
+     * 再查看 man socket 手册,里面对错误码 EAFNOSUPPORT 的描述为:
+     * EAFNOSUPPORT: The implementation does not support the specified
+     *               address family.
+     *
+     * 注意:这里的执行结果和书上答案描述的不一样,不知道是否操作系统差异
+     * 导致的. 实际上,在我的Linux 3.2上,把socket()的第三个参数设成999,才
+     * 是返回书上描述的"Protocol not supported"的错误信息.如后面所示.
+     *
+     * socket() 函数的第一个参数指定 域(domain), 对应的错误信息确实应该是
+     * EAFNOSUPPORT, 表示域不支持. 第三个参数指定 协议(protocol), 所以第三
+     * 个参数出错才应该是 EPFNOSUPPORT, 表示协议不支持.
      */
-    if ((sockfd = socket(AF_INET6, SOCK_STREAM, 0)) < 0)
-        err_sys("socket AF_INET SOCK_STREAM error");
+    printf("AF_INET: %d\n", AF_INET);
+    if ((sockfd = socket(9999, SOCK_STREAM, 0)) < 0)
+        err_ret("socket 9999 error");
+
+    /* 将 socket() 函数的第三个参数设成999,运行将会打印如下的错误信息:
+     * socket third-arg 999 error: Protocol not supported
+     *
+     * 查看 man errno 手册,可以发现该错误描述对应的错误码是EPROTONOSUPPORT
+     * 再查看 man socket 手册,里面对错误码 EPROTONOSUPPORT 的描述为:
+     * EPROTONOSUPPORT: The protocol type or the specified protocol is
+     *                  not supported within this domain.
+     */
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 9999)) < 0)
+        err_sys("socket third-arg 999 error");
 
     /* 2.填充 socket 地址结构体
      * We fill in an Internet socket address structure (a servaddr_inf
@@ -46,9 +70,9 @@ int main(int argc, char *argv[])
      * argument (for example, 192.168.1.88) into the proper format.
      */
     memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin6_family = AF_INET6;
-    servaddr.sin6_port = htons(13);      /* daytime server */
-    if (inet_pton(AF_INET6, argv[1], &servaddr.sin6_addr) <= 0) {
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(13);      /* daytime server */
+    if (inet_pton(AF_INET, argv[1], &servaddr.sin_addr) <= 0) {
         err_sys("inet_pton error for: %s\n", argv[1]);
     }
 

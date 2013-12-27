@@ -33,7 +33,7 @@ int main(void)
      * 以普通用户运行该程序时,会报错: bind error: Permission denied
      * 此时,错误码是EACCES. 查看man bind手册,对该错误码解释为:
      * EACCES The address is protected, and the user is not the superuser.
-     * 
+     *
      * 在Linux中,只有 root 用户可以绑定 1024 以下的端口.
      * 查看 man 7 ip 手册,里面有如下说明:
      * The port numbers below 1024 are called privileged ports (or

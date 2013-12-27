@@ -1,0 +1,45 @@
+A common way to describe the layers in a network is to use the International
+Organization for Standardization (ISO) open systems interconnection (OSI)
+model for computer communications. This is a seven-layer model, which we
+show in Figure 1.14 along with the approximate mapping to the Internet
+protocol suite.
+
+       Figure 1.14 Layers in OSI model and Internet protocol suite.
+   ---------------    ---------------                        application
+ 7 | application |    |             |                          details
+   ---------------    |             |                user        ^
+ 6 | presentation|    | application |               process      |
+   ---------------    |             |                  ^         |
+ 5 |   session   |    |             |     sockets      |         |
+   ===============    =============== <--- XTI     ====================
+ 4 |  transport  |    | TCP | | UDP |                  |         |
+   ---------------    ---------------                  v         |
+ 3 |   network   |    | IPv4, IPv6  |                kernel      |
+   ---------------    ---------------                            v
+ 2 |   datalink  |    |   device    |                      communications
+   ---------------    | driver and  |                         details
+ 1 |   physical  |    |  hardware   |
+   ---------------    ---------------
+      OSI model      Internet protocol suite
+
+下面描述 OSI model 和 Internet protocol suite 各层之间的对应关系.
+We consider the bottom two layers of the OSI model as the device driver and
+networking hardware that are supplied with the system. Normally, we need
+not concern ourselves with these layers other than being aware of some
+properties of the datalink, such as the 1500-byte Ethernet maximum transfer
+unit (MTU).
+
+The network layer is handled by the IPv4 and IPv6 protocols. The transport
+layers that we can choose from are TCP and UDP. We show a gap between TCP
+and UDP in Figure 1.14 to indicate that it is possible for an application
+to bypass the transport layer and use IPv4 or IPv6 directly. This is called
+a raw socket.
+
+The upper three layers of the OSI model are combined into a single layer
+called the application. This is the Web client (browser), Telnet client,
+Web server, FTP server, or whatever application we are using. With the
+Internet protocols, there is rarely any distinction between the upper three
+layers of the OSI model.
+
+注意: 上面早 application 和 "TCP, UDP" 之间有两行: sockets 和 XTI. 这两个
+是不同的概念. XTI 指的是 X/Open Transport Interface,是另外一套网络编程接口.

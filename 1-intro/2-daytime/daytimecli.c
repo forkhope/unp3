@@ -20,6 +20,12 @@ int main(int argc, char *argv[])
     char recvline[BUFSIZ];
     struct sockaddr_in servaddr;
 
+    /* 书中练习1.4提到: Modify Figure 1.5 by placing a counter in the while
+     * loop, counting the number of times read() returns a value greater
+     * than 0. Print the value of the counter before terminating.
+     */
+    int counter;
+
     if (argc != 2) {
         err_quit("Usage: %s IP-address", argv[0]);
     }
@@ -77,13 +83,18 @@ int main(int argc, char *argv[])
      * (an error).          In this example, the end of the record is being
      * denoted by the server closing the connection.
      */
+    counter = 0;
     while ((n = read(sockfd, recvline, BUFSIZ)) > 0) {
+        ++counter;
         recvline[n] = '\0';     /* null terminate */
         if (fputs(recvline, stdout) == EOF)
             err_sys("fputs error");
     }
     if (n < 0)
         err_sys("read error");
+
+    /* The value printed is always 1. */
+    printf("counter = %d\n", counter);
 
     exit(0);
 }
