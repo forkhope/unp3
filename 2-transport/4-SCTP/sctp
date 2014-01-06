@@ -1,0 +1,32 @@
+Stream Control Transmission Protocol (SCTP)
+====================
+SCTP provides services similar to those offered by UDP and TCP. SCTP is
+described in RFC 2960, and updated by RFC 3309. An introduction to SCTP is
+available in RFC 3286. SCTP provides associations between clients and
+servers. SCTP also provides applications with reliability, sequencing, flow
+control, and full-duplex data transfer, like TCP. The work "association" is
+used in SCTP instead of "connection" to avoid the connotation that a
+connection involves communication between only two IP addresses. An
+association refers to a comminucation between two systems, which may involve
+more than two addresses due to multihoming.
+
+Unlike TCP, SCTP is message-oriented. It provides sequenced delivery of
+individual records. Like UDP, the length of a record written by the sender
+is passed to the receiving application.
+
+SCTP can provide multiple streams between connection endpoints, each with
+its own reliable sequenced delivery of messages. A lost message in one of
+these streams does not block delivery of messages in any of the other
+streams. This approach is in contrast to TCP, where a loss at any point in
+the single stream of bytes blocks delivery of all future data on the
+connection until the loss is repaired.
+
+SCTP also provides a multihoming feature, which allows a single SCTP
+endpoint to support multiple IP addresses. This feature can provide
+increased robustness against network failure. An endpoint can have multiple
+redundant network connections, where each of these networks has a different
+connection to the Internet infrastructure. SCTP can work around a failure
+of one network or path across the Internet by switching to another address
+already associated with the SCTP association.
+---- Similar robustness can be obtained from TCP with help from routing
+protocols.

@@ -1,0 +1,219 @@
+1. Three-Way Handshake
+The following scenario occurs when a TCP connection is established:
+(1) The server must be prepared to accept an incoming connection. This is
+normally done by calling socket(), bind(), and listen() and is called a
+passive open.
+(2) The client issues an active open by calling connect(). This causes the
+client TCP to send a "synchronize" (SYN) segment, which tells the server
+the client's initial sequence number for the data that the client will send
+on the connection. Normally, there is no data sent with the SYN; it just
+contains an IP header, a TCP header, and possible TCP options.
+(3) The server must acknowledge (ACK) the client's SYN and the server must
+also send its own SYN containing the initial sequence number for the data
+that the server will send on the connection. The server sends its SYN and
+the ACK of the client's SYN in a single segment.
+(4) The client must acknowledge the server's SYN.
+
+The minimum number of packets required for this exchange is three; hence,
+this is called TCP's three-way handshake.
+               Figure 2.2. TCP three-way handshake.
+                client                      server
+                  |                           | socket(), bind(), listen()
+         socket() |      SYN J                | (passive open)
+connect() (blocks)|-------------------------->| accept() (blocks)
+    (active open) |   SYN K, ACK J+1          |
+connect() returns |<--------------------------|
+                  |       ACK K+1             |
+                  |-------------------------->| accept() returns
+                  |                           | read() (blocks)
+
+We show the client's initial sequence number as J and the server's initial
+sequence number as K. The acknowledgment number in an ACK is the next
+expected sequence number for the end sending the ACK. Since a SYN occupies
+one byte of the sequence number space, the acknowledgment number in the ACK
+of each SYN is the initial sequence number plus one. Similarly, the ACK of
+each FIN is the sequence number of the FIN plus one.
+
+2. TCP Options
+Each SYN can contain TCP options. Commonly used options include the
+following:
+(1) MSS option. With this option, the TCP sending the SYN announces its
+maximum segment size, the maximum amount of data that it is willing to
+accept in each TCP segment, on this connection. The sending TCP uses the
+receiver's MSS value as the maximum size of a segment that it sends. We will
+see how to fetch and set this TCP option with the TCP_MAXSEG socket option.
+(2) Window scale option. The maximum window that either TCP can advertise
+to the other TCP is 65,535, because the corresponding field in the TCP
+header occupies 16 bits. But, high-speed connections, common in today's
+Internet (45 Mbits/sec and faster, as described in RFC 1323), or long delay
+paths (satellite links) require a larger window to obtain the maximum
+throughput possible. This newer option specifies that the advertised window
+in the TCP header must be scaled (left-shifted) by 0-14 bits, providing a
+maximum window of almost one gigabyte. Both end-systems must support this
+option for the window scale to be used on a connection. We will see how to
+affect this option with the SO_RCVBUF socket option.
+(3) Timestamp option. This option is needed for high-speed connections to
+prevent possible data corruption caused by old, delayed, or duplicated
+segments. Since it is a new option, it is negotiated similarly to the window
+scale option.
+
+3. TCP Connection Termination
+While it takes three segments to establish a connection, it takes four to
+terminate a connection.
+(1) One application calls close() first, and we say that this end performs
+the active close. This end's TCP sends a FIN segment, which means it is
+finished sending data.
+(2) The other end that receives the FIN performs the passive close. The
+received FIN is acknowledged by TCP. The receipt of the FIN is also passed
+to the application as an end-of-file (after any data that may have already
+been queued for the application to receive), since the receipt of the FIN
+means the application will not receive any additional data on the connection
+(3) Sometime later, the application that received the end-of-file will
+close() its socket. This causes its TCP to send a FIN.
+(4) The TCP on the system that receives this final FIN (the end that did
+the active close) acknowledges the FIN.
+
+Since a FIN and an ACK are required in each direction, four segments are
+normally required. We use the qualifier "normally" because in some
+scenarios, the FIN in Step 1 is sent with data. Also, the segments in Steps
+2 and 3 are both from the end performing the passive close and could be
+combined into one segment. We show these packets in Figure 2.3.
+    Figure 2.3. Packets exchanged when a TCP connection is closed.
+           client                              server
+                 |                            |
+     close()     |         FIN M              | (passive close)
+  (active close) |--------------------------->| read() returns 0
+                 |        ACK M+1             |
+                 |<---------------------------|
+                 |         FIN N              |
+                 |<---------------------------| close()
+                 |        ACK N+1             |
+                 |--------------------------->|
+
+A FIN occupies one byte of sequence number space just like a SYN.
+Therefore, the ACK of each FIN is the sequence number of the FIN plus one.
+Between Steps 2 and 3 it is possible for data to flow from the end doing
+the passive close to the end doing the active close. This is called a half-
+close and we will talk about this in detail with the shutdown() function.
+
+The sending of each FIN occurs when a socket is closed. We indicated that
+the application calls close() for this to happen, but realize that when a
+Unix process terminates, either voluntarily (calling exit() or having the
+main() function return) or involuntarily (receiving a signal that terminates
+the process), all open descriptors are closed, which will also cause a FIN
+to be sent on any TCP connection that is still open.
+
+Although we show the client in Figure 2.3 performing the active close,
+either end--the client or the server--can perform the active close. Often
+the client performs the active close, but with some protocols (notably
+HTTP/1.0), the server performs the active close.
+
+4. TCP State Transition Diagram
+The operation of TCP with regard to connection establishment and connection
+termination can be specified with a state transition diagram.
+下面这幅 TCP连接状态图表 出自 "rfc793.txt".
+                   Figure. TCP Connection State Diagram
+                              +---------+ ---------\      active OPEN  
+                              |  CLOSED |            \    -----------  
+                              +---------+<---------\   \   create TCB  
+                                |     ^              \   \  snd SYN    
+                   passive OPEN |     |   CLOSE        \   \           
+                   ------------ |     | ----------       \   \         
+                    create TCB  |     | delete TCB         \   \       
+                                V     |                      \   \     
+                              +---------+            CLOSE    |    \   
+                              |  LISTEN |          ---------- |     |  
+                              +---------+          delete TCB |     |  
+                   rcv SYN      |     |     SEND              |     |  
+                  -----------   |     |    -------            |     V  
+ +---------+      snd SYN,ACK  /       \   snd SYN          +---------+
+ |         |<-----------------           ------------------>|         |
+ |   SYN   |                    rcv SYN                     |   SYN   |
+ |   RCVD  |<-----------------------------------------------|   SENT  |
+ |         |                    snd ACK                     |         |
+ |         |------------------           -------------------|         |
+ +---------+   rcv ACK of SYN  \       /  rcv SYN,ACK       +---------+
+   |           --------------   |     |   -----------                  
+   |                  x         |     |     snd ACK                    
+   |                            V     V                                
+   |  CLOSE                   +---------+                              
+   | -------                  |  ESTAB  |                              
+   | snd FIN                  +---------+                              
+   |                   CLOSE    |     |    rcv FIN                     
+   V                  -------   |     |    -------                     
+ +---------+          snd FIN  /       \   snd ACK          +---------+
+ |  FIN    |<-----------------           ------------------>|  CLOSE  |
+ | WAIT-1  |------------------                              |   WAIT  |
+ +---------+          rcv FIN  \                            +---------+
+   | rcv ACK of FIN   -------   |                            CLOSE  |  
+   | --------------   snd ACK   |                           ------- |  
+   V        x                   V                           snd FIN V  
+ +---------+                  +---------+                   +---------+
+ |FINWAIT-2|                  | CLOSING |                   | LAST-ACK|
+ +---------+                  +---------+                   +---------+
+   |                rcv ACK of FIN |                 rcv ACK of FIN |  
+   |  rcv FIN       -------------- |    Timeout=2MSL -------------- |  
+   |  -------              x       V    ------------        x       V  
+    \ snd ACK                 +---------+delete TCB         +---------+
+     ------------------------>|TIME WAIT|------------------>| CLOSED  |
+                              +---------+                   +---------+
+
+These are 11 different states defined for a connection and the rules of TCP
+dictate the transitions from one state to another, based on the current
+state and the segment received in that state.
+
+The two arrows leading from the ESTABLISHED state deal with the termination
+of a connection. If an application calls close() before receiving a FIN (an
+active close), the transition is to the FIN_WAIT_1 state. But if an
+application receives a FIN while in the ESTABLISHED state (a passive close),
+the transition is to the CLOSE_WAIT state.
+
+One reason for showing the state transition diagram is to show the 11 TCP
+states with their names. These states are displayed by netstat, which is a
+useful tool when debugging client/server applications.
+
+5. Watching the Packets
+Figure 2.5 shows the actual packet exchange that takes place for a complete
+TCP connection: the connection establishment, data transfer, and connection
+termination. We also show the TCP states through which each endpoint passes.
+    Figure 2.5. Packet exchange for TCP connection.
+                client                      server
+                     |                         | socket(),bind(),listen()
+                     |                         | LISTEN(passive open)
+         socket()    |\     SYN J, MSS=536     | accept() (blocks)
+  connect() (blocks) | \---------------------->| SYN_RCVD
+(active open)SYN_SENT| SYN K,ACK J+1,MSS=1460 /|
+         ESTABLISHED |<----------------------/ |
+   connect() returns |\       ACK K+1          |
+                     | \---------------------->| ESTABLISHED
+      <client forms  |                         | accept() returns
+            request> |                         | read() (blocks)
+             write() |\    data (request)      |
+                     | \---------------------->| read() returns
+      read()(blocks) |                         | <server processes request>
+                     |     data (reply)       /| write()
+      read() returns |<----------------------/ | read() (blocks)
+                     |     ACK of request      |
+                     |\     ACK of reply       |
+                     | \---------------------->|
+             close() |\         FIN M          |
+     (active close)  | \---------------------->| CLOSE_WAIT(passive close)
+          FIN_WAIT_1 |                        /| read() returns 0
+                     |         ACK M+1       / |
+          FIN_WAIT_2 |<---------------------/  |
+                     |          FIN N         /| close()
+           TIME_WAIT |<----------------------/ | LAST_ACK
+                     |\        ACK N+1         |
+                     | \---------------------->| CLOSED
+
+The client in this example announces an MSS of 536 and the server announces
+an MSS of 1,460. It is okay for the MSS to be different in each direction.
+
+It is important to notice in Figure 2.5 that if the entire purpose of this
+connection was to send a one-segment request and receive a one-segment
+reply, there would be eight segments of overhead involved when using TCP.
+建立连接需要三个segment,终止连接需要四个segment,加起来才七个,还差一个才凑
+足书中说的八个segment的开销. 最后一个segment是指上面图中的"ACK of reply"?
+
+If UDP was used instead, only two packets would be exchanged: the request
+and the reply.

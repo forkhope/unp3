@@ -1,0 +1,50 @@
+Transmission Control Protocol (TCP)
+====================
+The service provided by TCP to an application is different from the service
+provided by UDP. TCP is described in RFC 793, and updated by RFC 1323, RFC
+2581, RFC 2988, and RFC 3390. First, TCP provides connections between
+clients and servers. A TCP client establishes a connection with a given
+server, exchanges data with that server ascross the connection, and then
+terminates the connection.
+
+TCP also provides reliability. When TCP sends data to the other end, it
+requires an acknowledgment in return. If an acknowledgment is not received,
+TCP automatically retransmits the data and waits a longer amount of time.
+After some number of retransmissions, TCP will give up, with the total
+amount of time spent trying to send data typically between 4 and 10 minutes.
+---- Note that TCP does not guarantee that the data will be received by the
+other endpoint, as this is impossible. If delivers data to the other
+endpoint if possible, and notifies the user (by giving up on retransmissions
+and breaking the connection) if it is not possible. Therefore, TCP cannot be
+described as a 100% reliable protocol; it provides reliable delivery of data
+or reliable notification of failure.
+
+TCP contains algorithms to estimate the round-trip time (RTT) between a
+client and server dynamically so that it knows how long to wait for an
+acknowledgment.
+
+TCP also sequences the data by associating a sequence number with every byte
+that it sends. A segment is the unit of data that TCP passes to IP. If TCP
+receives duplicate data from its peer (say the peer thought a segment was
+lost and retransmitted it, when it wasn't really lost, the network was just
+overloaded), it can detect that the data has been duplicated (from the
+sequence numbers), and discard the duplicate data.
+---- There is no reliability provided by UDP. If a UDP datagram is
+duplicated in the network, two copies can be delivered to the receiving host
+
+TCP provides flow control. TCP always tells its peer exactly how many bytes
+of data it is willing to accept from the peer at any one time. This is
+called the advertised window. At any time, the window is the amount of room
+currently available in the receive buffer, guaranteeing that the sender
+cannot overflow the receive buffer. The window changes dynamically over
+time: As data is received from the sender, the window size decreases, but as
+the receiving application reads data from the buffer, thw window size
+increases. It is possible for the window to reach 0: when TCP's receive
+buffer for a socket is full and it must wait for the application to read
+data from the buffer before it can take any more data from the peer.
+---- UDP provides no flow control. It is easy for a fast UDP sender to
+transmit datagrams at a rate that the UDP receiver cannot keep up with.
+
+Finally, a TCP connection is full-duplex. This means that an application can
+send and receive data in both direction on a given connection at any time.
+---- UDP can bu full-duplex.

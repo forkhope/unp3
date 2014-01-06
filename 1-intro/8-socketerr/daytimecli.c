@@ -20,7 +20,6 @@ int main(int argc, char *argv[])
     if (argc != 2) {
         err_quit("Usage: %s IP-address", argv[0]);
     }
-    
 
     /* 打印出来 AF_INET 的值是 2. 换句话说, socket(AF_INET, SOCK_STREAM, 0)
      * 和 socket(2, SOCK_STREAM, 0)的效果完全是一样的,但由于没有哪个AF_*宏
@@ -53,7 +52,18 @@ int main(int argc, char *argv[])
      *                  not supported within this domain.
      */
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 9999)) < 0)
-        err_sys("socket third-arg 999 error");
+        err_ret("socket third-arg 999 error");
+
+    /* 将 socket() 函数的第三个参数设成999,运行将会打印如下的错误信息:
+     * socket second-arg 999 error: Invalid argument
+     *
+     * 查看 man errno 手册,可以发现该错误描述对应的错误码是EINVAL
+     * 再查看 man socket 手册,里面对错误码 EINVAL 的描述为:
+     * EINVAL: Invalid flags in type.
+     * 可以看到, man socket 手册里面明确提到 type 参数错时,报EINVAL的错
+     */
+    if ((sockfd = socket(AF_INET, 9999, 0)) < 0)
+        err_sys("socket second-arg 999 error");
 
     /* 2.填充 socket 地址结构体
      * We fill in an Internet socket address structure (a servaddr_inf
