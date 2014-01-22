@@ -1,0 +1,42 @@
+Undoubtedly, one of the most misunderstood aspects of TCP with regard to
+network programming is its TIME_WAIT state. The end that performs the active
+close goes through this state. The duration that this endpoint remains in
+this state is twice the maximum segment lifetime(MSL), sometimes called 2MSL
+
+Every implementation of TCP must choose a value for the MSL. The recommended
+value in RFC 1122 is 2 minutes, although Berkeley-derived implementations
+have traditionally used a value of 30 seconds instead. This means the
+duration of the TIME_WAIT state is between 1 and 4 minutes. The MSL is the
+maximum amount of time that any given IP datagram can live in a network.
+We know this time is bounded because every datagram contains an 8-bit hop
+limit with a maximum value of 255. Although this is a hop limit and not a
+true time limit, the assumption is made that a packet with the maximum hop
+limit of 255 cannot exist in a network for more than MSL seconds.
+
+The way in which a packet gets "lost" in a network is usually the result of
+routing anomalies.
+
+There are two reasons for the TIME_WAIT state:
+(1) To implement TCP's full-duplex connection termination reliably
+(2) To allow old duplicate segments to expire in the network.
+
+The first reason can be explained by looking at Figure 2.5 and assuming that
+the final ACK is lost. The server will resend its final FIN, so the client
+must maintain state information, allowing it to resend the final ACK. If it
+did not maintain this information, it would respond with an RST, which would
+be interpreted by the server as an error. If TCP is performing all the work
+necessary to terminate both directions of data flow cleanly for a connection
+(its full-duplex close), then it must correctly handle the loss of any of
+these four segments. This example also show why the end that performs the
+active close is the end that remains in the TIME_WAIT state: because that
+end is the one that might have to retransmit the final ACK.
+
+TCP must prevent old duplicates from a connection from reappearing at some
+later time and being misinterpreted as belonging to a new incarnation of the
+same connection. To do this, TCP will not initiate a new incarnation of a
+connection that is currently in the TIME_WAIT state. Since the duration of
+the TIME_WAIT state is twice the MSL, this allows MSL seconds for a packet
+in one direction to be lost, and another MSL seconds for the reply to be
+lost. By enforcing this rule, we are guaranteed that when we successfully
+establish a TCP connection, all old duplicates from previous incarnations of
+the connection have expired in the network.

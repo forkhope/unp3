@@ -1,0 +1,239 @@
+## Buffer Sizes and Limitations ##
+Certain limits affect the size of IP datagrams.
+1.The maximum size of an IPv4 datagram is 65,535 bytes, including the IPv4
+header. This is because of the 16-git total length field in Figure A.1.
+
+2.The maximum size of an IPv6 datagram is 65,575 bytes, including the 40-
+byte IPv6 header. This is because of the 16-bit payload length field in
+Figure A.2. Notice that the IPv6 payload length field does not include the
+size of the IPv6 header, while the IPv4 total length field does include the
+header size.
+IPv6 has a jumbo payload option, which extends the payload length field to
+32 bits, but this option is supported only on datalinks with a maximum
+transmission unit (MTU) that exceeds 65,535.
+
+3.Many networks have an MTU which can be dictated by the hardware. For
+example, the Ethernet MTU is 1,500 bytes. Other datalinks, such as
+point-to-point links using the Point-to-Point Protocol (PPP), have a
+configurable MTU.
+
+The minimum link MTU for IPv4 is 68 bytes. This permits a maximum-sized IPv4
+header (20 bytes of fixed header, 30 bytes of options) and minimum-sized
+fragment (the fragment offset is in units of 8 bytes). The minimum link MTU
+for IPv6 is 1,280 bytes. IPv6 can run over with a smaller MTU, but requires
+link-specific fragmentation and reassembly to make the link appear to have
+an MTU of at least 1,280 bytes.
+
+4.The smallest MTU in the path between two hosts is called the path MTU.
+Today, the Ethernet MTU of 1,500 bytes is often the path MTU. The path MTU
+need not be the same in both directions between any two hosts because
+routing in the Internet is often asymmetric. That is, the route from A to B
+can differ from the route from B to A.
+
+5. When an IP datagram is to be sent out an interface, if the size of the
+datagram exceeds the link MTU, fragmentation is performed by both IPv4 and
+IPv6. The fragments are not normally reassembled until they reach the final
+destination. IPv4 hosts perform fragmentation on datagrams that they
+generate and IPv4 routers perform fragmentation on datagrams that they
+forward. But with IPv6, only hosts perform fragmentation on datagrams that
+they generate; IPv6 routers do not fragment datagrams that they are
+forwarding. You may notice that fields exist in the IPv4 header to handle
+IPv4 fragmentation, but there are no fields in the IPv6 header for
+fragmentation. Since fragmentation is the exception, rather than the rule,
+IPv6 contains an option header with the fragmentation information.
+
+6.If the "don't fragment" (DF) bit is set in the IPv4 header, it specifies
+that this datagram must not be fragmented, either by the sending host or by
+any router. A router that receives an IPv4 datagram with the DF bit set
+whose size exceeds the outgoing link's MTU generates an ICMPv4 "destination
+unreachable, fragmentation needed but DF bit set" error message.
+
+Since IPv6 routers do not perform fragmentation, there is an implied DF bit
+with every IPv6 datagram. When an IPv6 router receives a datagram whose size
+exceeds the outgoing link's MTU, it generates an ICMPv6 "packet too big"
+error message.
+
+The IPv4 DF bit and its implied IPv6 counterpart can be used for path MTU
+discovery.
+
+7.IPv4 and IPv6 define a minimum reassembly buffer size, the minimum
+datagram size that we are guaranteed any implementation must support. For
+IPv4, this is 576 bytes. IPv6 raises this to 1,500 bytes. With IPv4, for
+example, we have no idea whether a given destination can accept a 577-byte
+datagram or not. Therefore, many IPv4 applications that use UDP (e.g., DNS)
+prevent applications from generating IP datagrams that exceed this size.
+
+8. TCP has a maximum segment size (MSS) that announces to the peer TCP the
+maximum amount of TCP data that the peer can send per segment. The goal of
+the MSS is to tell the peer the actual value of the reassembly buffer size
+and to try to avoid fragmentation. The MSS is ofent set to the interface MTU
+minus the fixed sizes of the IP and TCP headers. On an Ethernet using IPv4,
+this would be 1,460, and on an Ethernet using IPv6, this would be 1,440.
+(The TCP header is 20 bytes for both, but the IPv4 header is 20 bytes and
+IPv6 header is 40 bytes). 上面提到,Ethernet的链路MTU是1500,1500减去TCP头部
+字节数20,IP头部字节数20,就是1460. 这就是上面1460这个数字的由来.
+
+The MSS value in the TCP MSS option is a 16-bit field, limiting the value
+to 65,535. This is fine for IPv4, since the maximum amount of TCP data in
+an IPv4 datagram is 65,495 (65,535 minus the 20-byte IPv4 header and minus
+the 20-byte TCP header).
+
+9.SCTP keeps a fragmentation point based on the smallest path MTU found to
+all the peer's address. This smallest MTU size is used to split large user
+messages into smaller pieces that can be sent in one IP datagram. The
+SCTP_MAXSEG socket option can influence this value, allowing the user to
+request a smallest fragmentation point.
+
+# TCP Output ##
+Figure 2.15 shows what happens when an application writes data to a TCP
+socket.
+            Figure 2.15. Steps and buffers involved when an
+                application writes to a TCP socket.
+  ---------------   ---------------------------------------------------
+  | application |   |       application  buffer (any size)            |
+  ---------------   ---------------------------------------------------
+        |                    write |                         user process
+ ------------------------------------------------------------------------
+        |                          |                               kernel
+  ---------------                  V
+  |     TCP     |   ------------------------------------
+  ---------------   | socket send buffer (SO_SNDBUF)   |
+        |           ------------------------------------
+  ---------------       |
+  |     IP      |       |  MSS-sized TCP segments
+  ---------------       |  MSS normally <= MTU-40 (IPv4) or MTU-60 (IPv6)
+        |               V
+  ---------------
+  |output queue |       |
+  ---------------       |  MTU-sized IPv4 or IPv6 packets
+  |   datalink  |       V
+  ---------------
+
+Every TCP socket has a send buffer and we can change the size of this buffer
+with the SO_SNDBUF socket option. When an application calls write(), the
+kernel copies all the data from the application buffer into the socket send
+buffer. If there is insufficient room in the socket buffer for all the
+application's data (either the application buffer is larger than the socket
+send buffer, or there is already data in the socket send buffer), the
+process is put to sleep. This assumes the normal default of a blocking
+socket. The kernel will not return from the write() until the final byte in
+the application buffer has been copied into the socket send buffer.
+Therefore, the successful return from a write() to a TCP socket only tells
+us that we can reuse our application buffer. It does not tell us that either
+the peer TCP has received the data or that the peer application has received
+the data.
+
+TCP takes the data in the socket send buffer and sends it to the peer TCP
+based on all the rules of TCP data transmission. The peer TCP must
+acknowledge the data, and as the ACKs arrive from the peer, only then can
+out TCP discard the acknowledged data from the socket send buffer. TCP must
+keep a copy of out data until it is acknowledged by the peer.
+
+TCP sends the data to IP in MSS-sized or smaller chunks, prepending its TCP
+header to each segment, where the MSS is the value announced by the peer, or
+536 if the peer did not send an MSS option. IP prepends its header, searches
+the routing table for the destination IP address (the matching routing table
+entry specifies the outgoing interface), and passes the datagram to the
+appropriate datalink. IP might perform fragmentation before passing the
+datagram to the datalink, but as we said earlier, one goal of the MSS option
+is to try to avoid fragmentation and newer implementations also use path MTU
+discovery. Each datalink has an output queue, and if this queue is full, the
+packet is discarded and an error is returned up the protocol stack: from the
+datalink to IP and then from IP to TCP. TCP will note this error and try
+sending the segment later. The application is not told of this transient
+condition.
+
+# UDP Output ##
+Figure 2.16 shows what happens when an application writes data to a UDP
+socket.
+                Figure 2.16. Steps and buffers involved when an
+                application writes to a UDP socket.
+  ---------------   -------------------------------------
+  | application |   |       application  buffer         |
+  ---------------   -------------------------------------
+        |                   sendto |                       user process
+ ----------------------------------------------------------------------
+        |                          |                             kernel
+  ---------------                  V
+  |     UDP     |   ------------------------------------
+  ---------------   | socket send buffer (SO_SNDBUF)   |
+        |           ------------------------------------
+  ---------------       |
+  |     IP      |       |  UDP datagram
+  ---------------       |
+        |               V
+  ---------------
+  |output queue |       |
+  ---------------       |  MTU-sized IPv4 or IPv6 packets
+  |   datalink  |       V
+  ---------------
+
+This time, we show the socket send buffer as a dashed box because it doesn't
+really exist. A UDP socket has a send buffer size (which we can change with
+the SO_SNDBUF socket option), but this is simply an upper limit on the
+maximum-sized UDP datagram that can be written to the socket. If an
+application writes a datagram larger than the socket send buffer, EMSGSIZE
+is returned. Since UDP is unreliable, it does not need to keep a copy of
+the application's data and does not need an actual send buffer. (The
+application data is normally copied into a kernel buffer of some form as it
+passes down the protocol stack, but this copy is discarded by the datalink
+layer after the data is transmitted).
+
+UDP simply prepends its 8-byte header and passes the datagram to IP. IPv4
+or IPv6 prepends its header, determines the outgoing interface by performing
+the routing function, and then either adds the datagram to the datalink
+output queue (if it fits within the MTU) or fragments the datagram and adds
+each fragment to the datalink output queue. If a UDP application sends large
+datagrams (say 2,000-byte datagrams), there is a much higher probability of
+fragmentation than with TCP, because TCP breaks the application data into
+MSS-sized chunks, something that has no counterpart in UDP.
+
+The successful return from a write() to a UDP socket tells us that either
+the datagram or all fragments of the datagram have been added to the
+datalink output queue. If there is no room on the queue for the datagram or
+one of its fragments, ENOBUFS is often returned to the application.
+
+# SCTP Output ##
+Figure 2.17 shows what happens when an application writes data to an SCTP
+socket.
+            Figure 2.17. Steps and buffers involved when an
+                application writes to an SCTP socket.
+  ---------------   ---------------------------------------------------
+  | application |   |       application  buffer (any size)            |
+  ---------------   ---------------------------------------------------
+        |                    write |                         user process
+ ------------------------------------------------------------------------
+        |                          |                               kernel
+  ---------------                  V
+  |    STCP     |   ------------------------------------
+  ---------------   | socket send buffer (SO_SNDBUF)   |
+        |           ------------------------------------
+  ---------------       |
+  |     IP      |       |
+  ---------------       |
+        |               V
+  ---------------
+  |output queue |       |
+  ---------------       |  MTU-sized IPv4 or IPv6 packets
+  |   datalink  |       V
+  ---------------
+
+SCTP, since it is a reliable protocol like TCP, has a send buffer. As with
+TCP, an application can change the size of this buffer with the SO_SNDBUF
+socket option. When the application calls write(), the kernel copies all
+the data from the application buffer into the socket send buffer. If there
+is insufficient room in the socket buffer for all of the application's data
+(either the application buffer is large than the socket send buffer, or
+there is already data in the socket send buffer), the process is put to
+sleep. This sleeping assumes the normal default of a blocking socket. The
+kernel will not return from the write() until the final byte in the
+application buffer has been copied into the socket send buffer. Therefore,
+the successful return from a write() to an SCTP socket only tells the sender
+that it can reuse the application buffer. It does not tell us that either
+the peer SCTP has received the data, or that the peer application has
+received the data.
+
+SCTP takes the data in the socket send buffer and sends it to the peer SCTP
+based on all the rules of SCTP data transmission. The sending SCTP must
+await a SACK in which the cumulative acknowledgment point passes the sent
+data before that data can be removed from the socket buffer.

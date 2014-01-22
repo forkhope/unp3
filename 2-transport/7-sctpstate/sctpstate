@@ -1,0 +1,236 @@
+SCTP is connection-oriented like TCP, so it also has association
+establishment and termination handshakes. However, SCTP's handshakes are
+different than TCP's, so we describe them here.
+
+1. Four-Way Handshake
+The following scenario, similar to TCP, occurs when an SCTP association
+is established:
+(1) The server must be prepared to accept an incoming association. This
+preparation is normally done by calling socket(), bind(), and listen() and
+is called a passive open.
+(2) The client issues an active open by calling connect() or by sending a
+message, which implicitly opens the association. This causes the client SCTP
+to send an INIT message (which stands for "initialization") to tell the
+server the client's list of IP addresses, initial sequence number,
+initiation tag to identify all packets in this association, number of
+outbound streams the client is requesting, and number of inbound streams
+the client can support.
+(3) The server acknowledges the client's INIT message with an INIT-ACK
+message, which contains the sever's list of IP addresses, initial sequence
+number, initiation tag, number of outbound streams the server is requesting,
+number of inbound streams the server can support, and a state cookie. The
+state cookie contains all of the state that the server needs to ensure that
+the association is valid, and is digitally signed to ensure its validity.
+(4) The client echos the server's state cookie with a COOKIE-ECHO message.
+This message may also contain user data bundled within the same packet.
+(5) The server acknowledges that the cookie was correct and tht the
+association was established with a COOKIE-ACK message. This message may also
+contain user data bundled within the same packet.
+
+The minimum number of packets required for this exchange is four; hence,
+this process is called SCTP's four-way handshake. We show a picture of the
+four segments in Figure 2.6.
+        Figure 2.6. SCTP four-way handshake.
+                client                  server
+           socket() |                             | socket(),bind(),listen()
+ connect() (blocks) |                             | (passive open)
+      (active open) |\    INIT (Ta,J)             | accept() (blocks)
+                    | \-------------------------->|
+                    | Ta:INIT-ACK(Tz,K,cookie C) /|
+                    |<--------------------------/ |
+                    |\    Tz:COOKIE-ECHO C        |
+                    | \-------------------------->| accept() returns
+                    |      Ta:COOKIE-ACK         /| read() (blocks)
+  connect() returns |<--------------------------/ |
+
+The SCTP four-way handshake is similar in many ways to TCP's three-way
+handshake, except for the cookie generation, which is an integral part. The
+INIT carries with it (along with its many parameters) a verification tag,
+Ta, and an initial sequence number, J. The tag must be present in every
+packet sent by the peer for the life of the association. The initial
+sequence number J is used as the starting sequence number for DATA messages
+termed DATA chunks. The peer also chooses a verification tag, Tz, which must
+be present in each of its packets for the life of the association. Along
+with the verification tag and initial sequence number, K, the receiver of
+the INIT also sends a cookie, C. The cookie contains all the state needed to
+set up the SCTP association, so that the server's SCTP stack does not need
+to keep information about the associating client.
+
+At the conclusion of the four-way handshake, each side chooses a primary
+destination address. The primary destination address is used as the default
+destination to which data will be sent in the absence of network failure.
+
+2. Association Termination
+Unlike TCP, SCTP does not permit a "half-closed" association. When one end
+shuts down an association, the other end must stop sending new data. The
+receiver of the shutdown request sends the data that was queued, if any, and
+then completes the shutdown. We show this exchange in Figure 2.7.
+     Figure 2.7. Packets exchanged when an SCTP association is closed.
+                    client                      server
+        close()      |\        SHUTDOWN           |
+      (active close) | \------------------------->| (passive close)
+                     |                            | read returns 0
+                     |                            |
+                     |      SHUTDOWN-ACK         /| close()
+                     |<-------------------------/ |
+                     |\    SHUTDOWN-COMPLETE      |
+                     | \------------------------->|
+SCTP does not have a TIME_WAIT state like TCP, due to its use of
+verification tags. All chunks are tagged with the tag exchanged in the INIT
+chunks; a chunk from an old connection will arrive with an incorrect tag.
+Thereforce, in lieu of keeping an entire connection in TIME_WAIT, SCTP
+instead places verification tag values in TIME_WAIT.
+
+3. SCTP State Transition Diagram
+The operation of SCTP with regard to association establishment and
+termination can be specified with a state transition diagram.
+下面的状态图标出自 "rfc2960.txt" 的 第4小节.
+                       -----          -------- (frm any state)
+                     /       \      /  rcv ABORT      [ABORT]
+    rcv INIT        |         |    |   ----------  or ----------
+    --------------- |         v    v   delete TCB     snd ABORT
+    generate Cookie  \    +---------+                 delete TCB
+    snd INIT ACK       ---|  CLOSED |
+                          +---------+
+                           /      \      [ASSOCIATE]
+                          /        \     ---------------
+                         |          |    create TCB
+                         |          |    snd INIT
+                         |          |    strt init timer
+          rcv valid      |          |
+        COOKIE  ECHO     |          v
+    (1) ---------------- |      +------------+
+        create TCB       |      | COOKIE-WAIT| (2)
+        snd COOKIE ACK   |      +------------+
+                         |          |
+                         |          |    rcv INIT ACK
+                         |          |    -----------------
+                         |          |    snd COOKIE ECHO
+                         |          |    stop init timer
+                         |          |    strt cookie timer
+                         |          v
+                         |      +--------------+
+                         |      | COOKIE-ECHOED| (3)
+                         |      +--------------+
+                         |          |
+                         |          |    rcv COOKIE ACK
+                         |          |    -----------------
+                         |          |    stop cookie timer
+                         v          v
+                       +---------------+
+                       |  ESTABLISHED  |
+                       +---------------+
+                                    |
+                                    |
+                           /--------+--------\
+       [SHUTDOWN]         /                   \
+       -------------------|                   |
+       check outstanding  |                   |
+       DATA chunks        |                   |
+                          v                   |
+                     +---------+              |
+                     |SHUTDOWN-|              | rcv SHUTDOWN/check
+                     |PENDING  |              | outstanding DATA
+                     +---------+              | chunks
+                          |                   |------------------
+     No more outstanding  |                   |
+     ---------------------|                   |
+     snd SHUTDOWN         |                   |
+     strt shutdown timer  |                   |
+                          v                   v
+                     +---------+        +-----------+
+                 (4) |SHUTDOWN-|        | SHUTDOWN- |  (5,6)
+                     |SENT     |        | RECEIVED  |
+                     +---------+        +-----------+
+                          |  \                |
+    (A) rcv SHUTDOWN ACK  |   \               |
+    ----------------------|    \              |
+    stop shutdown timer   |     \rcv:SHUTDOWN |
+    send SHUTDOWN COMPLETE|      \  (B)       |
+    delete TCB            |       \           |
+                          |        \          | No more outstanding
+                          |         \         |-----------------
+                          |          \        | send SHUTDOWN ACK
+    (B)rcv SHUTDOWN       |           \       | strt shutdown timer
+    ----------------------|            \      |
+    send SHUTDOWN ACK     |             \     |
+    start shutdown timer  |              \    |
+    move to SHUTDOWN-     |               \   |
+    ACK-SENT              |                |  |
+                          |                v  |
+                          |             +-----------+
+                          |             | SHUTDOWN- | (7)
+                          |             | ACK-SENT  |
+                          |             +----------+-
+                          |                   | (C)rcv SHUTDOWN COMPLETE
+                          |                   |-----------------
+                          |                   | stop shutdown timer
+                          |                   | delete TCB
+                          |                   |
+                          |                   | (D)rcv SHUTDOWN ACK
+                          |                   |--------------
+                          |                   | stop shutdown timer
+                          |                   | send SHUTDOWN COMPLETE
+                          |                   | delete TCB
+                          |                   |
+                          \    +---------+    /
+                           \-->| CLOSED  |<--/
+                               +---------+
+
+              Figure 3: State Transition Diagram of SCTP
+As in Figure 2.4, the transitions from one state to another in the state
+machine are dictated by the rules of SCTP, based on the current state and
+the chunk received in that state. For example, if an application performs an
+active open in the CLOSED state, SCTP sends an INIT and the new state is
+COOKIE-WAIT. If SCTP next receives an INIT ACK, it sends a COOKIE ECHO and
+the new state is COOKIE-ECHOED. If SCTP then receives a COOKIE ACK, it moves
+to the ESTABLISHED state. This final state is where most data transfer
+occurs, although DATA chunks can be piggybacked on COOKIE ECHO and COOKIE
+ACK chunks.
+
+The two arrows leading from the ESTABLISHED state deal with the termination
+of an association. If an application calls close() before receiving a
+SHUTDOWN (an active close), the transition is to the SHUTDOWN-PENDING state.
+However, if an application receives a SHUTDOWN while in the ESTABLISHED
+state (a passive close), the transition is to the SHUTDOWN-RECEIVED state.
+
+4. Watching the Packets
+Figure 2.9 shows the actual packet exchange that takes place for a sample
+SCTP association: the association establishment, data transfer, and
+association termination. We also show the SCTP states through which each
+endpoint passes.
+    Figure 2.9. Packet exchange for SCTP association.
+                client                  server
+           socket() |                             | socket(),bind(),listen()
+ connect() (blocks) |                             | (passive open)
+      (active open) |\    INIT (Ta,J)             | accept() (blocks)
+        COOKIE-WAIT | \-------------------------->| CLOSED
+                    | Ta:INIT-ACK(Tz,K,cookie C) /|
+      COOKIE-ECHOED |<--------------------------/ |
+                    |\   Tz:COOKIE-ECHO C,DATA    |
+                    | \-------------------------->| accept() returns
+                    |  Ta:COOKIE-ACK,SACK,DATA   /| ESTABLISHED
+  connect() returns |<--------------------------/ |
+        ESTABLISHED |\       Tz:SACK,DATA         |
+                    | \-------------------------->|
+                    |          Ta:SACK           /|
+                    |<--------------------------/ |
+            close() |\       Tz:SHUTDOWN          |
+     (active close) | \-------------------------->| (passive close)
+      SHUTDOWN-SENT |                             | read() returns 0
+                    |       Ta:SHUTDOWN-ACK      /| close()
+                    |<--------------------------/ | SHUTDOWN-ACK-SENT
+             CLOSED |\    Tz:SHUTDOWN-COMPLETE    |
+                    | \-------------------------->| CLOSED
+Ih this example, the client piggybacked its first data chunk on the COOKIE
+ECHO, and the server replies with data on the COOKIE ACK. In general, the
+COOKIE ECHO will often have one or more DATA chunks bundled with it when
+the application is using the one-to-many interface style.
+
+The unit of information within an SCTP packet is a "chunk". A "chunk" is
+self-descriptive and contains a chunk type, chunk flags, and a chunk length.
+This approach facilitates the bundling of chunks simply by combining
+multiple chunks into an SCTP outbound packet.
+
+5. SCTP Options
+SCTP uses parameters and chunks to facilitate optional features.

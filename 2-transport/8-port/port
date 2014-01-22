@@ -1,0 +1,140 @@
+## Port Numbers ##
+At any given time, multiple processes can be using any given transport: UDP,
+SCTP, or TCP. All three transport layers use 16-bit integer port numbers to
+differentiate between these processes.
+
+When a client wants to contact a server, the client must identify the server
+with which it wants to communicate. TCP, UDP, and SCTP define a group of
+well-known ports to identify well-known services. For example, every TCP/IP
+implementation that supports FTP assigns the well-known port of 21 (decimal)
+to the FTP server.
+
+Clients, on the other hand, normally use ephemeral ports, that is, short-
+lived ports. These port numbers are normally assigned automatically by the
+transport protocol to the client. Clients normally do not care about the
+value of the ephemeral port; the client just needs to be certain that the
+ephemeral port is unique on the client host. The transport protocol code
+guarantees this uniqueness.
+
+The Internet Assigned Numbers Authority (IANA) maintains a list of port
+number assignments. The port numbers are divided into three ranges:
+(1) The well-known ports: 0 through 1023. These port numbers are controlled
+and assigned by the IANA. When possible, the same port is assigned to a
+given services for TCP, UDP, and SCTP. For example, port 80 is assigned for
+a Web server, for both TCP and UDP, even though all implementations
+currently use only TCP.
+    RFC2960 states that all existing TCP port numbers should be valid for
+    the same service using SCTP.
+(2) The registered ports: 1024 through 49151. These are not controlled by
+the IANA, but the IANA registers and lists the uses of these ports as a
+convenience to the community. When possible, the same port is assigned to
+a given service for both TCP and UDP. For example, ports 6000 througth 6063
+are assigned for an X Window server for both protocols, even though all
+implementations currently use only TCP. The upper limit of 49151 for these
+ports was introduced to allow a range for ephemeral ports; RFC 1700 lists
+the upper range as 65535.
+(3) The dynamic or private ports, 49152 througth 65535. The IANA says
+nothing about these ports. These are what we call ephemeral ports.
+
+Figure 2.10 shows this division, along with the common allocation of the
+port numbers.
+            Figure 2.10. Allocation of port numbers.
+     IANA                                                      IANA
+ |  well-known  | |        IANA registered ports             dynamic or
+ |<------------>| |<----------------------------------->| |<------------->|
+ |    ports     | |                                            private
+  1          1023  1024                             49151  49152      65535
+                                                                 ports
+Unix systems have the concept of a reserved port, which is any port less
+than 1024. These ports can only be assigned to a socket by an appropriately
+privileged process. All the IANA well-known ports are reserved ports; hence,
+the server allocating this port (such as the FTP server) must have superuser
+privileges when it starts.
+
+There are a few clients (not servers) that require a reserved port as part
+of the client/server authentication: the rlogin and rsh clients are common
+examples. These clients call the library function rresvport() to create a
+TCP socket and assign an unused port in the range 513-1023 to the socket.
+This function normally tries to bind port 1023, and if that fails, it tries
+to bind 1022, and so on, until it either succeeds or fails on port 513.
+
+## Socket Pair ##
+The socket pair for a TCP connection is the four-tuple that defines the two
+endpoints of the connection: the local IP address, local port, foreign IP
+address, and foreign port. A socket pair uniquely identifies every TCP
+connection on a network. For SCTP, an association is identified by a set of
+local IP addresses, a local port, a set of foreign IP addresses, and a
+foreign port. When either of the endpoints of an association are multihomed,
+then multiple four-tuple sets (with different IP addresses but the same port
+numbers) may identify the same association.
+
+The two values that identify each endpoint, an IP address and a port number,
+are often called a socket. 如此所述, socket 由一个IP地址和一个端口号组成.
+
+## TCP Port Numbers and Concurrent Servers ##
+With a concurrent server, where the main server loop spawns a child to
+handle each new connection, what happens if the child continues to use the
+well-known port number while servicing a long request?
+这个问题是说:如果同一个客户端两次连接到同一个服务器的同一个端口,则这两个连接
+的服务器IP地址,服务器端口号,客户端IP地址都是一样的,那么它们的区别在哪里?
+
+书中提到,这两个连接的区别在于其客户端端口号不一样.
+一个连接由两个socket (socket pair)来标识. 每个socket关联一个IP地址和一个端
+口号. 两个socket就关联两个IP地址和两个端口号,总共四个值. 这四个值中的任何
+一个值不一样,都表示不同的连接. 如下图所示.
+        Figure 2.14. Second client connection with same server.
+                                    12.106.32.254
+    206.168.112.219                 192.168.42.1
+------------------------       -------------------------
+|   -----------        |       |    -----------        |
+|   | client1 |<------\|       |   /| client1 |--\     |
+|   -----------        |\      |  / -----------   \    |
+|{206.168.112.219:1500,| \     | |  {*:21, *:*} ---\---|-> listening socket
+|   12.106.32.254:21}  |  \    | |                  \  |
+|                      |   \   | |fork           fork\ |
+|                    connection| |  ------------     | |
+|   -----------        |     \ | \->|  server  |     | |
+|   | client2 |<------\|      -|--->| (child1) |     | |
+|   -----------        |\      |    ------------     | |
+|{206.168.112.219:1501,| \     |{12.106.32.254:21, --|-|-> connected socket
+|   12.106.32.254:21}  |  \    |206.168.112.219:1500}| |
+------------------------   \   |                     | |
+                     connection|    ------------     / |
+                             \ |    |  server  |<---/  |
+                              -|--->| (child2) |       |
+                               |    ------------       |
+                               |{12.106.32.254:21, ----|-> connected socket
+                               |206.168.112.219:1501}  |
+                               -------------------------
+
+We use the notation {*:21, *:*} to indicate the server's socket pair. The
+server is waiting for a connection request on any local interface (the first
+asterisk) on port 21. The foreign IP address and foreign port are not
+specified and we denote them as *:*. We also call this a listening socket.
+
+When we specify the local IP address as an asterisk, it is called the
+wildcard character. If the host on which the server is running is multihomed
+(as in this example), the server can specify that it wants only to accept
+incoming connections that arrive destined to one specific local interface.
+This is a one-or-any choice for the server. The server cannot specify a list
+of multiple addresses. The wildcard local address is the "any" choice.
+In Figure 1.9, the wildcard address was specified by setting the IP address
+in the socket address structure to INADDR_ANY before calling bind().
+
+When the server receives and accepts the client's connection, it forks a
+copy of itself, letting the child handle the client.
+At this point, we must distinguish between the listening socket and the
+connected socket on the server host. Notice that the connected socket uses
+the same local port (21) as the listening socket. Also notice that on the
+multihomed server, the local address is filled in for the connected socket
+(12.106.32.254) once the connection is established.
+
+Notice from this example that TCP cannot demultiplex incoming segments by
+looking at just the destination port number. TCP must look at all four
+elements in the socket pair to determine which endpoint receives an arriving
+segment. In Figure 2.14, we have three sockets with the same local port
+(21). If a segment arrives from 206.168.112.219 port 1500 destined for
+12.106.32.254 port 21, it is delivered to the first child. If a segment
+arrives from 206.168.112.219 port 1501 destined for 12.106.32.254 port 21,
+it is delivered to the second child. All other TCP segments destined for
+port 21 are delivered to the original server with the listening socket.

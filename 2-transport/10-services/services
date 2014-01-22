@@ -1,0 +1,34 @@
+## Standard Internet Services ##
+Figure 2.18 lists several standard services that are provided by most
+implementations of TCP/IP. Notice that all are provided using both TCP and
+UDP and the port number is the same for both protocols.
+  Figure 2.18. Standard TCP/IP services provided by most implementations
+---------------------------------------------------------------------------------
+| Name    | TCP port | UDP port | RFC |                 Description             |
+---------------------------------------------------------------------------------
+| echo    |    7     |     7    | 862 |Server returns whatever the client sends.|
+| discard |    9     |     9    | 863 |Server discards whatever the client sends|
+| daytime |   13     |    13    | 867 |Server returns the time and date in a    |
+|         |          |          |     |human-readable format.                   || chargen |   19     |    19    | 864 |TCP server sends a continual stream of   |
+|         |          |          |     |characters, until the connection is      |
+|         |          |          |     |terminated by the client. UDP server     |
+|         |          |          |     |sends a datagram containing a random     |
+|         |          |          |     |number of characters (between 0 and 512) |
+|         |          |          |     |each time the client sends a datagram.   |
+| time    |   37     |    37    | 868 |Server returns the time as a 32-bit      |
+|         |          |          |     |binary number. This number represents the|
+|         |          |          |     |the number of seconds since midnight     |
+|         |          |          |     |January 1,1900,UTC.                      |
+---------------------------------------------------------------------------------
+
+Often these services are provided by the inetd daemon on Unix hosts. These
+standard services provide an easy testing facility using the standard Telnet
+client.
+
+Notice that when we connect to the daytime server, the server performs the active
+close, while with the echo server, the client performs the active close. Recal
+from the Figure 2.4 that the end performing the active close is the end that goes
+through the TIME_WAIT state.
+
+These "simple services" are often disabled by default on modern systems due to
+denial-of-service and other resource utilization attacks against them.
