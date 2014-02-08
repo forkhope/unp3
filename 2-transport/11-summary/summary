@@ -1,0 +1,28 @@
+UDP is a simple, unreliable, connectionless protocol, while TCP is a
+complex, reliable, connection-oriented protocol. SCTP combines some of the
+features of both protocols, providing additional features beyond those
+found in TCP. Most applications on the Internet use TCP (the Web, Telnet,
+FTP, and email).
+
+TCP establishes connections using a three-way handshake and terminates
+connections using a four-packet exchange. When a TCP connection is
+established, it goes from the CLOSED state to the ESTABLISHED state, and
+when it is terminated, it goes back to the CLOSED state. There are 11 states
+in which a TCP connection can be, and a state transition diagram gives the
+rules on how to go between the states. Understanding this diagram is
+essential to diagnosing problems using the netstat command and
+understanding what happens when an application calls functions such as
+connect(), accept(), and close().
+
+TCP's TIME_WAIT state is a continual source of confusion with network
+programmers. This state exists to implement TCP's full-duplex connection
+termination (i.e., to handle the case of the final ACK being lost), and to
+allow old duplicate segments to expire in the network.
+
+SCTP establishes an association by using a four-way handshake and terminates
+connections using a three-packet exchange. When an SCTP association is
+established, it goes from the CLOSED state to the ESTABLISHED state, and
+when it is terminated, it goes back to the CLOSED state. There are eight
+states in which an SCTP association can be, and a state transition diagram
+gives the rules on how to go between the states. SCTP does not need the
+TIME_WAIT state as TCP does due to its use of verification tags.

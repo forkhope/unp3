@@ -9,7 +9,8 @@ UDP and the port number is the same for both protocols.
 | echo    |    7     |     7    | 862 |Server returns whatever the client sends.|
 | discard |    9     |     9    | 863 |Server discards whatever the client sends|
 | daytime |   13     |    13    | 867 |Server returns the time and date in a    |
-|         |          |          |     |human-readable format.                   || chargen |   19     |    19    | 864 |TCP server sends a continual stream of   |
+|         |          |          |     |human-readable format.                   |
+| chargen |   19     |    19    | 864 |TCP server sends a continual stream of   |
 |         |          |          |     |characters, until the connection is      |
 |         |          |          |     |terminated by the client. UDP server     |
 |         |          |          |     |sends a datagram containing a random     |
