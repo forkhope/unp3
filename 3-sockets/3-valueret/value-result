@@ -1,0 +1,14 @@
+The reason that the size changes from an integer to be a pointer to an
+integer is because the size is both a value when the function is called
+(it tells the kernel the size of the structure so that the kernel does not
+write past the end of the structure when filling it in) and a result when
+the function returns (it tells the process how much information the kernel
+actually stored in the structure). This type of argument is called a
+value-result argument.
+
+When using value-result arguments for the length of socket address
+structures, if the socket address structure is fixed-length, the value
+returned by the kernel will always be that fixed size: 16 for an IPv4
+sockaddr_in and 28 for an IPv6 sockaddr_in6, for example. But with a
+variable-length socket address structure (e.g., a Unix domain sockaddr_un),
+the value returned can be less than the maximum size of the structure.

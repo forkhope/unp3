@@ -1,0 +1,167 @@
+## Socket Address Structures ##
+# IPv4 Socket Address Structure
+An IPv4 socket address structure, commonly called an "Internet socket address structure"
+is named sockaddr_in and is defined by including the <netinet/in.h> hreader.
+    Figure 3.1 The Internet (IPv4) socket address structure: sockaddr_in.
+    struct in_addr {
+        in_addr_t s_addr;
+    };
+
+    struct sockaddr_in {
+        uint8_t         sin_len;        /* length of structure (16) */
+        sa_family_t     sin_family;     /* AF_INET */
+        in_port_t       sin_port;       /* 16-bit TCP or UDP port number */
+        struct in_addr  sin_addr;       /* 32-bit IPv4 address. network byte ordered */
+        char            sin_zero[8];    /* unused */
+    };
+There are several points we need to make about socket address structures in general
+using this example:
+> The length member, sin_len, was added with 4.3BSD-Reno, when support for the OSI
+  protocols was add. Not all vendors support a length field for socket address structures
+  and the POSIX specification does not require this member.
+  Having a length field simplifies the handling of variable-length socket address
+  structures.
+> Even if the length field is present, we need never set it and need never examine it,
+  unless we are dealing with routing sockets. It is used within the kernel by the
+  routines that deal with socket address structures from various protocol families.
+> The POSIX specification requires only three members in the structure: sin_family,
+  sin_addr, and sin_port. It is acceptable for a POSIX-complicant implementation to
+  define additional structure members, and this is normal for an Internet socket address
+  structure. Almost all implementations add the sin_zero member so that all socket
+  address structures are at least 16 bytes in size.
+> Both the IPv4 address and the TCP or UDP port number are always stored in the structure
+  in network byte order.
+> The 32-bit IPv4 address can be accessed in two different ways. For example, if serv is
+  defined as an Internet socket address structure, then serv.sin_addr references the
+  32-bit IPv4 addresses as an in_addr structure, while serv.sin_addr.s_addr references
+  the same 32-bit IPv4 address as an in_addr_t (typically an unsigned 32-bit integer). We
+  must be certain that we are referencing the IPv4 address correctly, especially when it
+  is used as an argument to a function, because compilers often pass structures
+  differently from integers.
+> The sin_zero member is unused, but we always set it to 0 when filling in one of these
+  structures. By convention, we always set the entire structure to 0 before filling it
+  in, not just the sin_zero member.
+> Socket address structures are used only on a given host: The structure itself is not
+  communicated between different hosts, although certain fields (e.g., the IP address
+  and port) are used for communication.
+
+# Generic Socket Address Structure
+通用socket地址结构体定义在 <sys/socket.h> 头文件中.
+    Figure 3.3 The generic socket address structure: sockaddr.
+    struct sockaddr {
+        uint8_t      sa_len;
+        sa_family_t  sa_family;    /* address family: AF_xxx value */
+        char         sa_data[14];  /* protocol-specific address */
+    };
+This requires that any calls to these functions must cast the pointer to the protocol-
+specific socket address structure to be a pointer to a generic socket address structure.
+For example,
+    struct sockaddr_in serv;    /* IPv4 socket address structure */
+    /* fill in serv{} */
+    bind(sockfd, (struct sockaddr *)&serv, sizeof(serv));
+From an application programmer's point of view, the only use of these generic socket
+address structures is to cast pointers to protocol-specific structures.
+
+# IPv6 Socket Address Structure
+The IPv6 socket address is defined by including the <netinet/in.h> header.
+    Figure 3.4 IPv6 socket address structure: sockaddr_in6.
+    struct in6_addr {
+        uint8_t s6_addr[16];    /* 128-bit IPv6 address, network byte ordered */
+    };
+    #define SIN6_LEN            /* required for compile-time tests */
+    struct sockaddr_in6 {
+        uint8_t         sin6_len;       /* length of this struct (28) */
+        sa_family_t     sin6_family;    /* AF_INET6 */
+        in_port_t       sin6_port;      /* transport layer port# */
+        uint32_t        sin6_flowinfo;  /* flow information, undefined */
+        struct in6_addr sin6_addr;      /* IPv6 address, network byte ordered */
+        uint32_t        sin6_scope_id;  /* set of interfaces for a scope */
+    };
+Note the following points about Figure 3.4:
+> The SIN6_LEN constant must be defined if the system supports the length member for
+  socket address structures.
+> The IPv6 family is AF_INET6, whereas the IPv4 family is AF-INET.
+> The members in this structure are ordered so that if the sockaddr_in6 structure is
+  64-bit aligned, so is the 128-bit sin6_addr member. On some 64-bit processors, data
+  accesses of 64-bit values are optimized if stored on a 64-bit boundary.
+> The sin6_flowinfo member is divided into two fields:
+    * The low-order 20 bits are the flow label
+    * The high-order 12 bits are reserved
+> The sin6_scope_id identifies the scope zone in which a scoped address is meaningful,
+  most commonly an interface index for a link-local address.
+
+# New Generic Socket Address Structure
+A new generic socket address structure was defined as part of the IPv6 sockets API, to
+overcome some of the shortcomings of the existing struct sockaddr. Unlike the struct
+sockaddr, the new struct sockaddr_storage is large enough to hold any socket address type
+supported by the system. The sockaddr_storage structure is defined by including the
+<netinet/in.h> header, which we show in Figure 3.5.
+    Figure 3.5 The storage socket address structure: sockaddr_storage.
+    struct sockaddr_storage {
+        uint8_t     ss_len;     /* length of this struct (implementation dependent */
+        sa_family_t ss_family;  /* address family: AF_xxx value */
+        /* implementation-dependent elements to provide:
+         * a) alignment sufficient to fulfill the alignment requirements of all
+         *    socket address types that the system supports.
+         * b) enough storage to hold any type of socket address that the system supports
+         */
+    };
+The sockaddr_storage type provides a generic socket address structure that is different
+from struct sockaddr in two ways:
+    a. If any socket address structures that the system supports have alignment
+       requirements, the sockaddr_storage provides the strictest alignment requirement.
+    b. The sockaddr_storage is large enough to contain any socket address structure
+       that the system supports.
+Note that the fields of the sockaddr_storage structure are opaque to the user, except
+for ss_family and ss_len (if present). The sockaddr_storage must be cast or copied to
+the appropriate socket address structure for the address given in ss_family to access
+any other fields.
+
+# Comparison Of Socket Address Structures
+Figure 3.6 shows a comparison of the five socket address structures that we will
+encounter in this text: IPv4, IPv6, Unix domain, datalink, and storage. In this figure,
+we assume that the socket address structures all contain a one-byte length field, that
+the family field also occupies one byte, and that any field that must be at least some
+number of bits is exactly that number of bits.
+    Figure 3.6. Comparison of various socket address structures.
+   IPv4                IPv6             Unix             Datalink            Storage
+ sockaddr_in{}    sockaddr_in6{}    sockaddr_un{}      sockaddr_dl{}   sockaddr_storage{}
+---------------- ----------------- ----------------- ------------------ -----------------
+|length|AF_INET| |length|AF_INET6| |length|AF_LOCAL| |length|AF_LINK  | |length | AF_XXX|
+|--------------| ----------------| |---------------- |----------------| |---------------|
+| 16-bit port# | | 16-bit port#  | |               | |interface index | |               |
+|--------------- ----------------| |               | |----------------| |               |
+|   32-bit     | |    32-bit     | |               | |type | name len | |               |
+| IPv4 address | |   flow label  | |               | |----------------| |               |
+|--------------| |---------------| |               | |addr len|sel len| |               |
+|              | |               | |               | |----------------| |               |
+|   (unused)   | |               | |               | |                | |               |
+|              | |    128-bit    | |               | | interface name | |               |
+---------------- |  IPv6 address | |               | |     and        | |               |
+  fixed-length   |               | |               | | link-layer     | |   (opaque)    |
+  (16 bytes)     |               | |    pathname   | |       address  | |               |
+                 |               | | (up to        | |                | |               |
+                 |               | |    104 bytes) | |                | |               |
+                 |---------------| |               | ------------------ |               |
+                 |     32-bit    | |               |   variable-length  |               |
+                 |    scope ID   | |               |                    |               |
+                 ----------------- |               |                    |               |
+                   fixed-length    |               |                    |               |
+                   (28 bytes)      |               |                    |               |
+                                   |               |                    |               |
+                                   |               |                    |               |
+                                   |               |                    |               |
+                                   |               |                    |               |
+                                   -----------------                    -----------------
+                                    variable-length                    longtest on system
+
+Two of the socket address structures are fixed-length, while the Unix domain structure
+and the datalink structure are variable-length. To handle variable-length structure,
+whenever we pass a pointer to a socket address structure as an argument to one of the
+socket functions, we pass its length as another argument. We show the size in bytes (for
+the 4.4BSD implementation) of the fixed-length structures beneath each structure.
+    The sockaddr_un structure itself is not variable-length, but the amount of
+    information--the pathname within the structure--is variable-length. When passing
+    pointers to these structures, we must be careful how we handle the length field,
+    both the length field in the socket address strucutre itself (if supported by the
+    implementation) and the length to and from the kernel.

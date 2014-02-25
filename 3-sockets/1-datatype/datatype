@@ -1,0 +1,17 @@
+              Figure3.2. Datatypes required by the POSIX specification.
+---------------------------------------------------------------------------------------
+|  Datatype   |              Description                             |     Header     |
+|=============|======================================================|================|
+| int8_t      | Signed 8-bit integer                                 | <sys/types.h>  |
+| uint8_t     | Unsigned 8-bit integer                               | <sys/types.h>  |
+| int16_t     | Signed 16-bit integer                                | <sys/types.h>  |
+| uint16_t    | Unsigned 16-bit integer                              | <sys/types.h>  |
+| int32_t     | Signed 32-bit integer                                | <sys/types.h>  |
+| uint32_t    | Unsigned 32-bit integer                              | <sys/types.h>  |
+|-------------|------------------------------------------------------|----------------|
+| sa_family_t | Address family of socket address structure           | <sys/socket.h> |
+| socketlen_t | Length of socket address strcture, normally uint32_t | <sys/socket.h> |
+|-------------|------------------------------------------------------|----------------|
+| in_addr_t   | IPv4 address, normally uint32_t                      | <netinet/in.h> |
+| in_port_t   | TCP or UDP port, normally uint16_t                   | <netinet/in.h> |
+---------------------------------------------------------------------------------------
