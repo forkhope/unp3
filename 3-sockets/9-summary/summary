@@ -1,0 +1,21 @@
+Socket address structures are an integral part of every network program. We
+allocate them, fill them in, and pass pointers to them to various socket
+funcions. Sometimes we pass a pointer to one of these structures to a
+socket function and it fills in the contents. We always pass these structure
+by reference (that is, we pass a pointer to the structure, not the structure
+itself), and we always pass the size of the structure as another argument.
+When a socket function fills in a structure, the length is also passed by
+reference, so that its value can be updated by the function. We call these
+value-result arguments.
+
+Socket address structures are self-defining because they always begin with
+a field (the "family") that identifies the address family contained in the
+structure.
+
+The two functions that convert IP addresses between presentation format (
+what we write, such as ASCII characters) and numeric format (what goes into
+a socket address structure) are inet_pton() and inet_ntop().
+
+TCP sockets provide a byte stream to an application: There are no record
+markers. The return value from a read() can be less than what we asked for,
+but this does not indicate an error.

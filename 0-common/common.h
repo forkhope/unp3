@@ -16,5 +16,8 @@ int Accept(int, struct sockaddr *, socklen_t *);
 void Write(int, const void *, size_t);
 void Close(int);
 
+ssize_t readn(int fd, void *buf, size_t count)
+ssize_t writen(int fd, const void *buf, size_t count)
+
 #endif /* L_COMMON_H_ */
 

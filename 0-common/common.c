@@ -117,3 +117,53 @@ void Close(int fd)
     if (close(fd) == -1)
         err_sys("close error");
 }
+
+/* Read "n" bytes from a descriptor. */
+ssize_t readn(int fd, void *buf, size_t count)
+{
+    int nleft;
+    int nread;
+    char *ptr;
+
+    ptr = buf;
+    nleft = count;
+    while (nleft > 0) {
+        if ((nread = read(fd, ptr, nleft)) < 0) {
+            if (errno == EINTR)
+                nread = 0;      /* and call read() again */
+            else
+                return -1;
+        }
+        else if (nread == 0) {
+            break;              /* EOF */
+        }
+
+        nleft -= nread;
+        ptr += nread;
+    }
+    return count - nleft;           /* return >= 0 */
+}
+
+/* Write "n" bytes to a descriptor */
+ssize_t writen(int fd, const void *buf, size_t count)
+{
+    int nleft;
+    int nwrite;
+    const char *ptr;
+
+    ptr = buf;
+    nleft = count;
+    while (nleft > 0) {
+        if ((nwrite = write(fd, ptr, nleft)) <= 0) {
+            if (nwrite < 0 && errno == EINTR)
+                nwrite = 0;     /* and call write() again */
+            else
+                return -1;      /* error */
+        }
+
+        nleft -= nwrite;
+        ptr += nwrite;
+    }
+
+    return count;
+}

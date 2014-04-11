@@ -1,0 +1,9 @@
+Stream sockets (e.g., TCP sockets) exhibit a behavior with the read() and
+write() functions that differs from normal file I/O. A read() or write() on
+a stream socket might input or output fewer bytes than requested, but this
+is not an error condition. The reason is that buffer limits might be
+reached for the socket in the kernel. All that is required to input or
+output the remaining bytes is for the caller to invoke the read() or
+write() function again. This scenario is always a possibility on a stream
+socket with read(), but is normally seen with write() only if the socket is
+nonblocking.

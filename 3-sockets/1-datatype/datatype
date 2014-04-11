@@ -1,3 +1,13 @@
+注意: 书中注明,int8_t, uint8_t,...,uint32_t等这几个数据类型定义为<sys/types.h>中,但是
+在Linux中,这几个数据类型实际上是定义在<stdint.h>中. POSIX.1标准也是这个说明的,该头文
+件的在线网址为:http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/stdint.h.html
+另外,POSIX.1标准要求<inttypes.h>头文件必须包含<stdint.h>头文件.所以,包含<inttypes.h>
+头文件也能引入 int8_t, uint8_t 等数据类型的定义.查看POSIX在线网址对<arpa/inet.h>头文
+件的说明(http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/arpa_inet.h.html).
+里面提到: The <arpa/inet.h> header shall define the uint32_t and uint16_t types as
+described in <inttypes.h>. Inclusion of the <arpa/inet.h> header may also make visible
+all symbols from <netinet/in.h> and <inttypes.h>.
+即,包含<arpa/inet.h>也会引入 int8_t, uint8_t 等数据类型的声明.
               Figure3.2. Datatypes required by the POSIX specification.
 ---------------------------------------------------------------------------------------
 |  Datatype   |              Description                             |     Header     |
