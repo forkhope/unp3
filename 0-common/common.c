@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 static void err_doit(int, int, const char *, va_list);
 
@@ -166,4 +167,14 @@ ssize_t writen(int fd, const void *buf, size_t count)
     }
 
     return count;
+}
+
+const char *Inet_ntop(int af, const void *src, char *dst, socklen_t size)
+{
+    const char *p;
+
+    if ((p = inet_ntop(af, src, dst, size)) == NULL) {
+        err_sys("close error");
+    }
+    return p;
 }

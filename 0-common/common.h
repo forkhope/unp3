@@ -1,6 +1,7 @@
 #ifndef L_COMMON_H_
 #define L_COMMON_H_
 
+#define MAXLINE     1024
 #define LISTENQ     1024    /* 2nd argument to listen() */
 
 void err_ret(const char *fmt, ...);
@@ -16,8 +17,10 @@ int Accept(int, struct sockaddr *, socklen_t *);
 void Write(int, const void *, size_t);
 void Close(int);
 
-ssize_t readn(int fd, void *buf, size_t count)
-ssize_t writen(int fd, const void *buf, size_t count)
+const char *Inet_ntop(int, const void *, char *, socklen_t);
+
+ssize_t readn(int fd, void *buf, size_t count);
+ssize_t writen(int fd, const void *buf, size_t count);
 
 #endif /* L_COMMON_H_ */
 

@@ -1,0 +1,68 @@
+To perform network I/O, the first thing a process must do is call the
+socket() function, specifying the type of communication protocol desired
+(TCP using IPv4, UDP using IPv6, Unix domain stream protocol, etc.).
+    #include <sys/socket.h>
+    int socket(int family, int type, int protocol);
+        Returns: non-negative descriptor if OK, -1 on error
+family specifies the protocol family and is one of the constants show in
+Figure 4.2. This argument is often referred to as domain instead of family.
+The socket type is one of the constants shown in Figure 4.3. The protocol
+argument to the socket() function should be set to the specific protocol
+type found in Figure 4.4, or 0 to select the system's default for the given
+combination of family and type.
+
+        Figure 4.2. Protocol family constants for socket function.
+               -----------------------------------------
+               |  family  |         Description        |
+               =========================================
+               | AF_INET  |  IPv4 protocols            |
+               | AF_INET6 |  IPv6 protocols            |
+               | AF_LOCAL |  Unix domain protocols     |
+               | AF_ROUTE |  Routing sockets           |
+               | AF_KEY   |  Key socket                |
+               -----------------------------------------
+        Figure 4.3. type of socket for socket function.
+               --------------------------------------------
+               |      type      |       Description       |
+               ============================================
+               | SOCK_STREAM    | stream socket           |
+               | SOCK_DGRAM     | datagram socket         |
+               | SOCK_SEQPACKET | sequenced packet socket |
+               | SOCK_RAW       | raw socket              |
+               --------------------------------------------
+        Figure 4.4. protocol of sockets for AF_INET or AF_INET6.
+               --------------------------------------------
+               |    Protocol    |       Description       |
+               ============================================
+               | IPPROTO_TCP    | TCP transport protocol  |
+               | IPPROTO_UDP    | UDP transport protocol  |
+               | IPPROTO_SCTP   | SCTP transport protocol |
+               --------------------------------------------
+
+Not all combinations of socket family and type are valid. Figure 4.5 shows
+the valid combinations, along with the actual protocols that are valid for
+each pair. The boxes marked "Yes" are valid but do not have handy acronyms.
+The blank boxes are not supported.
+    Figure 4.5. Combinations of family and type for the socket function.
+                 AF_INET  AF_INET6   AF_LOCAL AF_ROUTE  AF_KEY
+               ------------------------------------------------
+SOCK_STREAM    |TCP|SCTP | TCP|SCTP |  Yes   |        |       |
+SOCK_DGRAM     |  UDP    |   UDP    |  Yes   |        |       |
+SOCK_SEQPACKET |  SCTP   |   SCTP   |  Yes   |        |       |
+SOCK_RAW       |  IPv4   |   IPv6   |        |   Yes  |  Yes  |
+               ------------------------------------------------
+
+Linux supports a new socket type, SOCK_PACKET, that provides access to the
+datalink, similar to BPF and DLIP.
+The key socket, AF_KEY, is newer than the others. It provides support for
+cryptographic security. Similar to the way that a routing socket (AF_ROUTE)
+is an interface to the kernel's routing table, the key socket is an
+interface into the kernel's key table.
+
+## socket()函数的返回值 ##
+On success, the socket() function returns a small non-negative integer
+value, similar to a file descriptor. We call this a socket descriptor, or
+a sockfd. To obtain this socket descriptor, all we have specified is a
+protocol family (IPv4, IPv6, or Unix) and the socket type (stream,
+datagram, or raw). We have not yet specified either the local protocol
+address or the foreign protocol address.

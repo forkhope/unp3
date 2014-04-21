@@ -1,0 +1,61 @@
+Figure 4.1 shows a timeline of the typical scenario that takes place between
+a TCP client and server. First, the server is started, then sometime later,
+a client is started that connects to the server. We assume that the client
+sends a request to the server, the server processes the request, and the
+server sends a reply back to the client. THis continues until the client
+closes its end of the connection, which sends an end-of-file notification
+to the server. The server then closes its end of the connection and either
+terminates or waits for a new client connection.
+    Figure 4.1. Socket functions for elementary TCP client/server.
+                                                TCP Server
+                                              --------------
+                                              |  socket()  |
+                                              --------------
+                                                   |
+                                                   v
+                                              --------------
+                                   well-known |   bind()   |
+                                      port    --------------
+                                                   |
+                                                   v
+                                              --------------
+                                              |  listen()  |
+                                              --------------
+                                                   |
+                                                   v
+                                              --------------
+                                              |  accept()  |
+                                              --------------
+                                                   |
+          TCP Client                               v
+      ----------------                     blocks until connection
+      |   socket()   |                         from client
+      ----------------                              |
+            |                                       |
+            v                                       |
+      ----------------    connection establishment  |
+      |   connect()  |<---------------------------->|
+      ----------------   (TCP three-way handshake)  |
+            |                                       |
+            v                                       v
+      ----------------     data (request)      -------------
+  +-->|   write()    |------------------------>|   read()  |<--------+
+  |   ----------------                         -------------         |
+  |         |                                       |                |
+  |         |                                       v                |
+  |         |                                  process request       |
+  |         |                                       |                |
+  |         v                                       v                |
+  |   ----------------      data (reply)       -------------         |
+  +---|    read()    |<------------------------|  write()  |---------+
+      ----------------                         -------------
+            |                                       |
+            v                                       v
+      --------------- end-of-file notification --------------
+      |   close()   |------------------------->|   read()   |
+      ---------------                          --------------
+                                                    |
+                                                    v
+                                               --------------
+                                               | close()    |
+                                               --------------

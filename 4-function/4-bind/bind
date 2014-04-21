@@ -1,0 +1,67 @@
+The bind() function assigns a local protocol address to a socket. With the
+Internet protocols, the protocol address is the combination of either a
+32-bit IPv4 address or a 128-bit IPv6 address, along with a 16-bit TCP or
+UDP port number.
+#include <sys/socket.h>
+int bind(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);
+            Returns: 0 if OK, -1 on error
+bind() assigns a protocol address to a socket, and what that protocol
+address means depends on the protocol.
+
+The second argument is a pointer to a protocol-specific address, and the
+third argument is the size of this address structure. With TCP, calling
+bind() lets us specify a port number, an IP address, both, or neither.
+(1) Servers bind their well-known port when they start. If a TCP client or
+server does not do this, the kernel chooses an ephemeral port for the socket
+when either connect() or listen() is called. It is normal for a TCP client
+to let the kernel choose an ephemeral port, unless the application requires
+a reserved port, but it is rare for a TCP server to let the kernel choose
+an ephemeral port, since servers are known by their well-known port.
+(2) A process can bind() a specific IP address to its socket. The IP address
+must belong to an interface on the host. For a TCP client, this assigns the
+source IP address that will be used for IP datagrams sent on the socket. For
+a TCP server, this restricts the socket to receive incoming client
+connections destined only to that IP address.
+Normally, a TCP client does not bind() an IP address to its socket. The
+kernel chooses the source IP address when the socket is connected, based on
+the outgoing interface that is used, which in turn is based on the route
+required to reach the server.
+If a TCP server does not bind an IP address to its socket, the kernel uses
+the destination IP address of the client's SYN as the server's source IP
+address.
+
+As we said, calling bind() lets us specify the IP address, the port, both,
+or neither. Figure 4.6 summarizes the values to which we set sin_addr and
+sin_port, or sin6_addr and sin6_port, depending on the desired result.
+
+ Figure 4.6.Result when specifying IP address and/or port number to bind()
+---------------------------------------------------------------------------
+|    Process specifies   |                                                |
+|------------------------|            Result                              |
+|   IP address   | port  |                                                |
+===========================================================================
+|Wildcard        |   0   |Kernel chooses IP address and port              |
+|Wildcard        |nonzero|Kernel chooses IP addrlen,process specifies port|
+|Local IP address|   0   |Process specifies IP address,kernel chooses port|
+|Local IP address|nonzero|Process specifies IP address and port           |
+---------------------------------------------------------------------------
+If we specify a port number of 0, the kernel chooses an ephemeral port when
+bind() is called. But if we specify a wildcard IP address, the kernel does
+not choose the local IP address until either the socket is connected (TCP)
+or a datagram is sent on the socket (UDP).
+
+With IPv4, the wildcard address is specified by the constant INADDR_ANY,
+whose value is normally 0. This tells the kernel to choose the IP address.
+    struct sockaddr_in servaddr;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);   /* wildcard */
+While this works with IPv4, where an IP address is a 32-bit value that can
+be represented as a simple numeric constant (0 in this case), we cannot use
+this technique with IPv6, since the 128-bit IPv6 address is stored in a
+structure. To solve this problem, we write
+    struct sockaddr_in6     serv;
+    serv.sin6_addr = in6addr_any;       /* wildcard */
+The system allocates and initializes the in6addr_any variable to the
+constant IN6ADDR_ANY_INIT. The <netinet/in.h> header contains the extern
+declaration for in6addr_any.
+
+A common error from bind() is EADDRINUSE ("Address already in use").
