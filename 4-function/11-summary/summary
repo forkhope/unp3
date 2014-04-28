@@ -1,0 +1,10 @@
+#### Summary ####
+All clients and servers begin with a call to socket(), returning a socket
+descriptor. Clients then call connect(), while servers call bind(),
+listen(), and accept(). Sockets are normally closed with the standard
+close() function, although we will see another way to do this with the
+shutdown() function.
+
+Most TCP servers are concurrent, with the server calling fork() for every
+client connection that it handles. We will see that most UDP servers are
+iterative.

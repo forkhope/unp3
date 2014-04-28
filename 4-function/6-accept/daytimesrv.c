@@ -56,6 +56,11 @@ int main(void)
      * Our server must run with superuser privileges to bind() the reserved
      * port of 13. If we do not have superuser privileges, the call to
      * bind() will fail: "bind error: Permission denied"
+     *
+     * 书中Exercises 4.5提到这样一个问题: Remove the call to bind(), but
+     * allow the call to listen(). What happens? 书中答案是: Without a call
+     * to bind(), the call to listen() assigns en ephemeral port to the
+     * listening socket.此时,IP地址应该也是INADDR_ANY.
      */
     Bind(listenfd, (struct sockaddr *)&srvaddr, sizeof(srvaddr));
 
@@ -63,6 +68,7 @@ int main(void)
      * 该错误信息对应的错误码是EINVAL.查看man accept手册,里面有如下描述:
      * EINVAL   Socket is not listening for connections, or addrlen is
      *          invalid (e.g., is negative).
+     * 书中Exercises 4.4提到了这种情况.
      */
     Listen(listenfd, LISTENQ);
 

@@ -106,6 +106,12 @@ supported by the system. The sockaddr_storage structure is defined by including 
          * b) enough storage to hold any type of socket address that the system supports
          */
     };
+书中提到struct sockaddr_storage结构体定义在<netinet/in.h>头文件中,但是查看POSIX在线网址
+"http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/sys_socket.h.html",这个结构体
+实际上是定义在<sys/socket.h>中,只不过包含<netinet/in.h>可能会引入<sys/socket.h>而已.
+在Linux实际测试,确认包含<sys/socket.h>或者<netinet/in.h>都会引入struct sockaddr_storage
+的声明.但是包含<sys/socket.h>不会引入struct sockaddr_in的声明,必须包含<netinet/in.h>才行
+
 The sockaddr_storage type provides a generic socket address structure that is different
 from struct sockaddr in two ways:
     a. If any socket address structures that the system supports have alignment
