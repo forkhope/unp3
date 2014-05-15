@@ -47,4 +47,4 @@ transmit datagrams at a rate that the UDP receiver cannot keep up with.
 
 Finally, a TCP connection is full-duplex. This means that an application can
 send and receive data in both direction on a given connection at any time.
----- UDP can bu full-duplex.
+---- UDP can be full-duplex.

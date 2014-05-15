@@ -1,11 +1,12 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "common.h"
 
 static void err_doit(int, int, const char *, va_list);
 
@@ -86,6 +87,12 @@ int Socket(int domain, int type, int protocol)
     return n;
 }
 
+void Connect(int sockfd, const struct sockaddr *addr, socklen_t len)
+{
+    if (connect(sockfd, addr, len) < 0)
+        err_sys("connect error");
+}
+
 void Bind(int sockfd, const struct sockaddr *addr, socklen_t len)
 {
     if (bind(sockfd, addr, len) < 0)
@@ -119,6 +126,31 @@ void Close(int fd)
         err_sys("close error");
 }
 
+pid_t Fork(void)
+{
+    pid_t pid;
+
+    if ((pid = fork()) < 0) {
+        err_sys("fork error");
+    }
+    return pid;
+}
+
+char *Fgets(char *s, int size, FILE *stream)
+{
+    char *p;
+
+    if ((p = fgets(s, size, stream)) == NULL && ferror(stream))
+        err_sys("fgets error");
+    return p;
+}
+
+void Fputs(const char *s, FILE *stream)
+{
+    if (fputs(s, stream) == EOF)
+        err_sys("fputs error");
+}
+
 /* Read "n" bytes from a descriptor. */
 ssize_t readn(int fd, void *buf, size_t count)
 {
@@ -145,8 +177,63 @@ ssize_t readn(int fd, void *buf, size_t count)
     return count - nleft;           /* return >= 0 */
 }
 
+static ssize_t my_read(int fd, char *ptr)
+{
+	static int	read_cnt = 0;
+	static char	*read_ptr;
+	static char	read_buf[BUFSIZ];
+
+	if (read_cnt <= 0) {
+again:
+		if ( (read_cnt = read(fd, read_buf, sizeof(read_buf))) < 0) {
+			if (errno == EINTR)
+				goto again;
+			return(-1);
+		} else if (read_cnt == 0)
+			return(0);
+		read_ptr = read_buf;
+	}
+
+	read_cnt--;
+	*ptr = *read_ptr++;
+	return(1);
+}
+
+ssize_t readline(int fd, void *vptr, size_t maxlen)
+{
+	int		n, rc;
+	char	c, *ptr;
+
+	ptr = vptr;
+	for (n = 1; n < maxlen; n++) {
+		if ( (rc = my_read(fd, &c)) == 1) {
+			*ptr++ = c;
+			if (c == '\n')
+				break;	/* newline is stored, like fgets() */
+		} else if (rc == 0) {
+			if (n == 1)
+				return(0);	/* EOF, no data read */
+			else
+				break;		/* EOF, some data was read */
+		} else
+			return(-1);		/* error, errno set by read() */
+	}
+
+	*ptr = 0;	/* null terminate like fgets() */
+	return(n);
+}
+
+ssize_t Readline(int fd, void *ptr, size_t maxlen)
+{
+	ssize_t n;
+
+	if ( (n = readline(fd, ptr, maxlen)) < 0)
+		err_sys("readline error");
+	return(n);
+}
+
 /* Write "n" bytes to a descriptor */
-ssize_t writen(int fd, const void *buf, size_t count)
+static ssize_t writen(int fd, const void *buf, size_t count)
 {
     int nleft;
     int nwrite;
@@ -169,6 +256,22 @@ ssize_t writen(int fd, const void *buf, size_t count)
     return count;
 }
 
+void Writen(int fd, void *ptr, size_t nbytes)
+{
+    if (writen(fd, ptr, nbytes) != nbytes)
+        err_sys("writen error");
+}
+
+void Inet_pton(int af, const char *src, void *dst)
+{
+    int n;
+
+    if ((n = inet_pton(af, src, dst)) < 0)
+        err_sys("inet_pton error for %s", src); /* errno set */
+    else if (n == 0)
+        err_quit("inet_pton error for %s", src);    /* errno not set */
+}
+
 const char *Inet_ntop(int af, const void *src, char *dst, socklen_t size)
 {
     const char *p;
@@ -177,4 +280,27 @@ const char *Inet_ntop(int af, const void *src, char *dst, socklen_t size)
         err_sys("close error");
     }
     return p;
+}
+
+Sigfunc *Signal(int signo, Sigfunc *func)
+{
+    struct sigaction act, oact;
+
+    act.sa_handler = func;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+
+    if (signo == SIGALRM) {
+#ifdef SA_INTERRUPT
+        act.sa_flags |= SA_INTERRUPT;
+#endif
+    }
+    else {
+#ifdef SA_RESTART
+        act.sa_flags |= SA_RESTART;
+#endif
+    }
+    if (sigaction(signo, &act, &oact) < 0)
+        return SIG_ERR;
+    return oact.sa_handler;
 }
