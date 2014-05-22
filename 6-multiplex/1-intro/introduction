@@ -1,0 +1,21 @@
+What we need is the capability to tell the kernel that we want to be
+notified if one or more I/O conditions are ready (i.e., input is ready to
+be read, or the descriptor is captable of taking more output). This
+capability is called I/O multiplexing and is provided by the select() and
+poll() functions. We will also cover a newer POSIX variation of the former,
+called pselect().
+
+I/O multiplexing is typically used in networking applications in the
+following secnarios:
+> When a client is handling multiple descriptors (normally interactive
+input and a network socket), I/O multiplexing should be used.
+> It is possible, but rare, for a client to handle multiple sockets at the
+same time.
+> If a TCP server handles both a listening socket and its connected
+sockets, I/O multiplexing is normally used.
+> If a server handles both TCP and UDP, I/O multiplexing is normally used.
+> If a server handles multiple services and perhaps multiple protocols
+(e.g., the inetd daemon), I/O multiplexing is normally used.
+
+I/O multiplexing is not limited to network programming. Many nontrivial
+applications find a need for these techniques.

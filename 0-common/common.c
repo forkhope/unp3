@@ -199,6 +199,15 @@ again:
 	return(1);
 }
 
+ssize_t Readn(int fd, void *ptr, size_t nbytes)
+{
+    ssize_t n;
+
+    if ((n = readn(fd, ptr, nbytes)) < 0)
+        err_sys("readn error");
+    return n;
+}
+
 ssize_t readline(int fd, void *vptr, size_t maxlen)
 {
 	int		n, rc;

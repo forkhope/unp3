@@ -29,6 +29,7 @@ void Inet_pton(int, const char *, void *);
 const char *Inet_ntop(int, const void *, char *, socklen_t);
 
 ssize_t readn(int, void *, size_t);
+ssize_t Readn(int, void *, size_t);
 ssize_t  Readline(int, void *, size_t);
 void Writen(int, void *, size_t);
 
