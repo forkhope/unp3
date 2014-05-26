@@ -5,12 +5,12 @@ OBJS = $(patsubst %.c,%.o,$(wildcard *.c))
 
 .PHONY: all clean do
 
-all: echosrv echocli clean do
+all: echosrv.out echocli.out clean do
 
-echosrv: echosrv.o ../../0-common/common.o
+echosrv.out: echosrv.o ../../0-common/common.o
 	$(CC) $(LFLAGS) $@ $^
 
-echocli: echocli.o ../../0-common/common.o
+echocli.out: echocli.o ../../0-common/common.o
 	$(CC) $(LFLAGS) $@ $^
 
 clean:

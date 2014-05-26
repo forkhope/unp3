@@ -1,14 +1,14 @@
 CC = gcc
 CFLAGS = -Wall -o
-BIN = $(patsubst %.c,%,$(wildcard *.c))
+BIN = $(patsubst %.c,%.out,$(wildcard *.c))
 
 .PHONY: all do
 
 all: $(BIN) do
 
-%: %.c
+%.out: %.c
 	$(CC) $(CFLAGS) $@ $^
 
 do:
 	echo -e '\033[31mRUN THE PROGRAM!!!\033[0m'
-	./signal
+	./signal.out

@@ -88,11 +88,6 @@ static void str_echo(int fd)
         n = strlen(line);
         Writen(fd, line, n);
     }
-
-    if (n < 0 && errno == EINTR)
-        goto again;
-    else if (n < 0)
-        err_sys("str_echo: read error");
 }
 
 /* Out simple example is an echo server that performs the following steps:

@@ -3,11 +3,11 @@ CFLAGS = -Wall -o
 
 .PHONY: all do
 
-%: %.c
+%.out: %.c
 	$(CC) $(CFLAGS) $@ $<
 
-all: htons do
+all: htons.out do
 
 do:
 	echo -e '\033[31mRUN THE PROGRAM!!!\033[0m'
-	./htons
+	./htons.out

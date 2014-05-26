@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -I../../0-common
 LFLAGS = -Wall -o
 OBJS = $(patsubst %.c,%.o,$(wildcard *.c))
-BIN = daytimesrv
+BIN = daytimesrv.out
 
 .PHONY: all clean do
 
@@ -16,4 +16,4 @@ clean:
 
 do:
 	echo -e '\033[31mRUN THE PROGRAM!!!\033[0m'
-	sudo ./daytimesrv
+	sudo ./daytimesrv.out

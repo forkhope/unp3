@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -I../../0-common
 LFLAGS = -Wall -o
 OBJS = $(patsubst %.c,%.o,$(wildcard *.c))
-BIN = daytimecli
+BIN = daytimecli.out
 
 .PHONY: all clean do
 

@@ -3,11 +3,11 @@ CFLAGS = -Wall -o
 
 .PHONY: all do
 
-%: %.c
+%.out: %.c
 	$(CC) $(CFLAGS) $@ $<
 
-all: inet_pton do
+all: inet_pton.out do
 
 do:
 	echo -e '\033[31mRUN THE PROGRAM!!!\033[0m'
-	./inet_pton
+	./inet_pton.out
