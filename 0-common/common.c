@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <arpa/inet.h>
 #include "common.h"
 
@@ -312,4 +313,14 @@ Sigfunc *Signal(int signo, Sigfunc *func)
     if (sigaction(signo, &act, &oact) < 0)
         return SIG_ERR;
     return oact.sa_handler;
+}
+
+int Select(int nfds, fd_set *readfds, fd_set *writefds,
+        fd_set *exceptfds, struct timeval *timeout)
+{
+    int n;
+
+    if ((n = select(nfds, readfds, writefds, exceptfds, timeout)) < 0)
+        err_sys("select error");
+    return n;   /* can return 0 on timeout */
 }

@@ -7,6 +7,9 @@
 #define LISTENQ     1024    /* 2nd argument to listen() */
 #define SERV_PORT   9877
 
+#define min(x,y)   ((x) < (y) ? (x) : (y))
+#define max(x,y)   ((x) > (y) ? (x) : (y))
+
 void err_ret(const char *fmt, ...);
 void err_sys(const char *fmt, ...);
 void err_quit(const char *fmt, ...);
@@ -27,6 +30,8 @@ void Fputs(const char *, FILE *);
 
 void Inet_pton(int, const char *, void *);
 const char *Inet_ntop(int, const void *, char *, socklen_t);
+
+int Select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
 
 ssize_t readn(int, void *, size_t);
 ssize_t Readn(int, void *, size_t);
