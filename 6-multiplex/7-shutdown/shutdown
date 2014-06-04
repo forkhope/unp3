@@ -1,0 +1,58 @@
+#### shutdown() Function ####
+The normal way to terminate a network connection is to call the close()
+function. But, there are two limitations with close that can be avoided
+with shutdown():
+    1. close() decrements the descriptor's reference count and closes the
+    socket only if the count reaches 0. With shutdown(), we can initiate
+    TCP's normal connection termination sequence (the four segments
+    beginning with a FIN), regardless of the reference count.
+    2. close() terminates both directions of data transfer, reading and
+    writing. Since a TCP connection is full-duplex, there are times when we
+    want to tell the other end that we have finished sending, even though
+    that end might have more data to send us. Figure 6.12 shows the typical
+    function calls in this scenario.
+    Figure 6.12. Calling shutdown() to close half of a TCP connection.
+          client                                  server
+           write() |-----\         data             |
+                   |      ------------------------->| read() returns > 0
+           write() |-----\         data             |
+                   |      ------------------------->| read() returns > 0
+        shutdown() |-----\          FIN             |
+                   |      ------------------------->| read() returns 0
+                   |                          ------|
+                   |   ACK of data and FIN   /      |
+                   |<------------------------       |
+                   |               data       ------| write()
+read() returns > 0 |<------------------------/      |
+                   |               data       ------| write()
+read() returns > 0 |<------------------------/      |
+                   |                FIN       ------| close()
+  read() returns 0 |<------------------------/      |
+                   |-------                         |
+                   |       \   ACK of data and FIN  |
+                   |        ----------------------->|
+
+#include <sys/socket.h>
+int shutdown(int sockfd, int howto);
+        Returns: 0 if OK, -1 on error
+The action of the fucntion depends on the value of the howto argument.
+SHUT_RD     The read half of the connection is closed-- No more data can be
+    received on the socket and any data currently in the socket receive
+    buffer is discarded. The process can no longer issue any of the read
+    functions on the socket. Any data received after this call for a TCP
+    socket is acknowledged and then silently discarded.
+SHUT_WR     The write half of the connection is closed-- In the case of TCP,
+    this is called a half-close. Any data currently in the socket send
+    buffer will be sent, followed by TCP's normal connection termination
+    sequence. As we mentioned earlier, this closing of the write half is
+    done regardless of whether or not the socket descriptor's reference
+    count is currently greater than 0. The process can no longer issue any
+    of the write functions on the socket.
+SHUT_RDWR   The read half and the write half of the connection are both
+    closed-- This is equivalent to calling shutdown() twice: first with
+    SHUT_RD and then with SHUT_WR.
+
+The three SHUT_xxx names are defined by the POSIX specification. Typical
+values for the howto argument that you will encounter will be 0 (close the
+read half), 1 (close the write half), and 2 (close the read and the write
+half).

@@ -1,0 +1,30 @@
+In general, buffering for performance adds complexity to a network
+application, and the code in Figure 6.9 suffers from this complexity.
+Consider the case when several lines of input are available from the
+standard input. select() will cause the code at line 20 to read the input
+using fgets() and that, in turn, will read the available lines into a
+buffer used by stdio. But, fgets()  only returns a single line and leaves
+any remaining data sitting in the stdio buffer. The code at line 22 of
+Figure 6.9 writes that single line to the server and then select() is
+called again to wait for more work, even if there are additional lines to
+consume in the stdio buffer. The reason for this is that select() knows
+nothing of the buffers used by stdio--it will only show readability from
+the viewpoint of the read() system call, not calls like fgets(). For this
+reason, mixing stdio and select() is considered very error-prone and should
+only be done with great care.
+
+即,当有多行输入时, fgets() 函数只会返回第一行,剩余行缓冲在 stdio 的缓冲区
+中.此时,再次调用 fgets() 函数将不会阻塞,而是立刻返回缓冲区中第一行.但是在
+Figure 6.9的代码中,它只调用了一次 fgets() 函数,然后就调用 select() 函数去
+等待新的输入,忽略了 stdio 缓冲区中已经存在一些可读的行.
+
+The same problem exists with the call to readline() in the example in
+Figure 6.9. Instead of data being hidden from select() in a stdio buffer,
+it is hidden in readline()'s buffer. Recall that in Section 3.9 we
+provided a function that gives visibility into readline()'s buffer, so one
+possible solution is to modify our code to use that function before calling
+select() to see if data has already been read but not consumed. But again,
+the complexity grows out of hand quickly when we have to handle the case
+where the readline() buffer contains a partial line (meaning we still need
+to read more) as well as when it contains one or more complete lines
+(which we can consume).

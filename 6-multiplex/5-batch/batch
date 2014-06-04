@@ -1,0 +1,87 @@
+#### Batch Input ####
+If we consider the network between the client and server as a full-duplex
+pipe, with requests goint from the client to the server and replies in the
+reverse direction, then Figure 6.10 show our stop-and-wait mode.
+    Figure 6.10. Time line of stop-and-wait mode: interactive input.
+      time 0:  -----------------------------------------
+     client -->| request |                             |
+               |                                       |
+               -----------------------------------------
+      time 1:  -----------------------------------------
+               |         | request |                   |
+               |                                       |
+               -----------------------------------------
+      time 2:  -----------------------------------------
+               |                   | request |         |
+               |         |                             |
+               -----------------------------------------
+      time 3:  -----------------------------------------
+               |                             | request |--> server
+               |                                       |
+               -----------------------------------------
+      time 4:  -----------------------------------------
+               |                                       |
+               |                             |  reply  |<-- server
+               -----------------------------------------
+      time 5:  -----------------------------------------
+               |                                       |
+               |                   |  reply  |         |
+               -----------------------------------------
+      time 6:  -----------------------------------------
+               |                                       |
+               |         |  reply  |                   |
+               -----------------------------------------
+      time 7:  -----------------------------------------
+               |                                       |
+      client<--|  reply  |                             |
+               -----------------------------------------
+A request is sent by the client at time 0 and we assume an RTT of 8 units
+of time. The reply sent at time 4 is received at time 7. We also assume
+that there is no server processing time and that the size of the request is
+the same as the reply. Since there is a delay between sending a packet and
+that packet arriving at the other end of the pipe, and since the pipe is
+full-duplex, in this example, we are only using one-eighth of the pipe's
+capacity. This stop-and-wait mode is fine for interactive input, but since
+our client reads from standard input and writes to standard output, and
+since it is trivial under the Unix shells to redirect the input and output,
+we can easily run our client in a batch mode. When we redirect the input
+and output, however, the resulting output file is always smaller than the
+input file (and they should be identical for an echo server).
+
+To see what't happening, realize that in a batch mode, we can keep sending
+requests as fast as the network can accept them. The server processes them
+and sends back the replies at the same rate. This leads to the full pipe
+at time 7, as shown in Figure 6.11.
+  Figure 6.11. Filling the pipe between the client and server: batch mode
+      time 7:  -----------------------------------------
+            -->|request 8|request 7|request 6|request 5|-->
+            <--| reply 1 | reply 2 | reply 3 | reply 4 |<--
+               -----------------------------------------
+      time 8:  -----------------------------------------
+            -->|request 9|request 8|request 7|request 6|-->
+            <--| reply 2 | reply 3 | reply 4 | reply 5 |<--
+               -----------------------------------------
+Here we assume that after sending the first request, we immediately send
+another, and then another. We also assume that can keep sending requests as
+fast as the network can accept them, along with processing replies as fast
+as the network supplies them.
+
+To see the problem with our revised str_clit() function in Figure 6.9,
+assume that the input file contains only nine lines. The last line is sent
+at time 8, as shown in Figure 6.11. But we cannot close the connection
+after writing this request because there are still other requests and
+replies in the pipe. The cause of the problem in our handling of an EOF on
+input: The function returns to the main() function, which then terminates.
+But in a batch mode, an EOF on input does not imply that we have finished
+reading from the socket; there might still be requests on the way to the
+server, or replies on the way back from the server.
+
+What we need is a way to close one-half of the TCP connection. That is, we
+want to send a FIN to the server, telling it we have finished sending data,
+but leave the socket descriptor open for reading. This is done with the
+shutdown() function.
+
+即,在Batch mode的情况下,客户端也遇到EOF时,只能说明它读取完了所有输入,但并
+不保证所有输入已经发送到服务端,也不保证服务端的所有返回都被客户端读取了.
+此时,如果客户端不能在遇到EOF后,就终止程序,关闭连接.
+可以使用 shutdown() 函数在关闭 socket 全双工管道的其中一半.

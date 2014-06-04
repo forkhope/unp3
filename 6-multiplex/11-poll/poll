@@ -1,0 +1,100 @@
+#### poll() Function ####
+The poll() function originated with SVR3 and was originally limited to
+STREAMS devices. SVR4 removed this limitation, allowing poll() to work with
+any descriptor. poll() provides functionality that is similar to select(),
+but poll() provides additional information when dealing with STREAMS
+devices.
+#include <poll.h>
+int poll(struct pollfd *fdarray, unsigned long nfds, int timeout);
+    Returns: count of ready descriptors, 0 on timeout, -1 on error
+The first argument is a pointer to the first element of an array of
+structures. Each element of the array is a pollfd structure that specifies
+the conditions to be tested for a given descriptor, fd.
+    struct pollfd {
+        int     fd;         /* descriptor to check */
+        short   events;     /* events of interest on fd */
+        short   revents;    /* events of occurred on fd */
+    };
+The conditions to be tested are specified by the events member, and the
+function returns the status for that descriptor in the corresponding
+revents member. (Having two variables per descriptor, one a value and one a
+result, avoids value-result arguments). Each of these two members is
+composed of one or more bits that specify a certain conditioni. Figure 6.23
+shows the constants used to specify the events flag and to test the
+revents flag against.
+    Figure 6.23. Input events and returned revents for poll().
+--------------------------------------------------------------------------
+| Constant |Input to|Result from|         Description                   |
+|          | events?|  revents? |                                        |
+==========================================================================
+|POLLIN    |   *    |     *     |Normal or priority band data can be read|
+|POLLRDNORM|   *    |     *     |Normal data can be read                 |
+|POLLRDBAND|   *    |     *     |Priority band data can be read          |
+|POLLPRI   |   *    |     *     |High-priority data can be read          |
+|------------------------------------------------------------------------|
+|POLLOUT   |   *    |     *     |Normal data can be written              |
+|POLLWRNORM|   *    |     *     |Normal data can be written              |
+|POLLWRBAND|   *    |     *     |Priority band data can be written       |
+|------------------------------------------------------------------------|
+|POLLERR   |        |     *     |Error has occurred                      |
+|POLLHUP   |        |     *     |Hangup has occurred                     |
+|POLLNVAL  |        |     *     |Descriptor is not an open file          |
+--------------------------------------------------------------------------
+We have divided this figure into three sections: The first four constants
+deal with input, the next three deal with output, and the final three deal
+with errors. Notice that the final three cannot be set in events, but are
+always returned in revents when the corresponding condition exists.
+
+There are three classes of data identified by poll(): normal, priority
+band, and high-priority. These terms come from the STREAMS-based
+implements.
+    POLLIN can be defined as the logical OR of POLLRDNORM and POLLRDBAND.
+    The POLLIN constant exists from SVR3 implementations that predated the
+    priority bands in SVR4, so the constant remains for backward
+    compatibility. Similarly, POLLOUT is equivalent to POLLWRNORM, with the
+    former predating the latter.
+
+With regard to TCP and UDP sockets, the following conditions cause poll()
+to return the specified revent. Unfortunately, POSIX leaves many holes
+(i.e., optional ways to return the same condition) in its definition of
+poll().
+> All regular TCP data and all UDP data is considered normal.
+> TCP's our-of-band data is considered priority band.
+> When the read half of a TCP connection is closed (e.g., a FIN is
+  received), this is also considered normal data and a subsequent read
+  operation will return 0.
+> The presence of an error for a TCP connection can be considered either
+  normal data or an error (POLLERR). In either case, a subsequent read()
+  will return -1 with errno set to the appropriate value. This handles
+  conditions such as the receipt of an RST or a timeout.
+> The availability of a new connection on a listening socket can be
+  considered either normal data or priority data. Most implementations
+  consider this normal data.
+> The completion of a nonblocking connect() is considered to make a socket
+  writable.
+
+The number of elements in the array of structures is specified by the
+nfds argument.
+
+The timeout argument specifies how long the function is to wait before
+returning. A positive value specifies the number of milliseconds to wait.
+Figure 6.24 shows the possible values for the timeout argument.
+            Figure 6.24. timeout values for poll().
+      ---------------------------------------------------------
+      | timeout value |              Description              |
+      |=======================================================|
+      |    INFTIM     | Wait forever                          |
+      |      0        | Return immediately, do not block      |
+      |      >0       | Wait specified number of milliseconds |
+      ---------------------------------------------------------
+The constant INFTIM is defined to be a negative value. If the system does
+not provide a timer with millisecond accuracy, the value is rounded up to
+the nearest supported value.
+
+The return value from poll() is -1 if an error occurred, 0 if no
+descriptors are ready before the timer expires, otherwise it is the number
+of descriptors that have a nonzero revents member.
+
+If we are no longer interested in a particular descriptor, we just set the
+fd member of the pollfd structure to a negative value. Then the events
+member is ignored and the revents member is set to 0 on return.

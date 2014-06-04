@@ -20,7 +20,9 @@ void Connect(int, const struct sockaddr *, socklen_t);
 void Bind(int, const struct sockaddr *, socklen_t);
 void Listen(int, int);
 int Accept(int, struct sockaddr *, socklen_t *);
+void Shutdown(int, int);
 
+ssize_t Read(int, void *, size_t);
 void Write(int, const void *, size_t);
 void Close(int);
 pid_t Fork(void);

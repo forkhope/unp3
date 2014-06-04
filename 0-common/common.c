@@ -115,6 +115,21 @@ int Accept(int sockfd, struct sockaddr *addr, socklen_t *len)
     return n;
 }
 
+void Shutdown(int fd, int how)
+{
+    if (shutdown(fd, how) < 0)
+        err_sys("shutdown error");
+}
+
+ssize_t Read(int fd, void *buf, size_t count)
+{
+    ssize_t n;
+
+    if ((n = read(fd, buf, count)) == -1)
+        err_sys("read error");
+    return n;
+}
+
 void Write(int fd, const void *buf, size_t count)
 {
     if (write(fd, buf, count) != count)

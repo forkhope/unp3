@@ -1,0 +1,97 @@
+#### pselect() Function ####
+The pselect function was invented by POSIX and is now supported by many of
+Unix variants.
+#include <sys/select.h>
+#include <signal.h>
+#include <time.h>
+int pselect(int maxfdp1, fd_set *readset, fd_set *writeset,
+        fd_set *exceptset, const struct timespec *timeout,
+        const sigset_t *sigmask);
+            Returns: count of ready descriptors, 0 on timeout, -1 on error
+pselect() contains two changes from the normal select() function:
+1. pselect() uses the timespec structure, another POSIX invention, instead
+   of timeval structure.
+        struct timespec {
+            time_t tv_sec;      /* seconds */
+            long tv_nsec;       /* nanoseconds */
+        };
+   The defference in these two structures is with the second member: The
+   tv_nsec member of the newer structure specifies nanoseconds, whereas the
+   tv_usec member of the older structure specifies microseconds.
+2. pselect() adds a sixth argument: a pointer to a signal mask. This allows
+   the program to disable the delivery of certain signals, test some global
+   variables that are set by the handlers for these now-disabled signals,
+   and then call pselect(), telling it to reset the signal mask.
+
+"man pselect"手册对 pselect() 有如下描述:
+sigmask is a pointer to a signal mask; if it is not NULL, then pselect()
+first replaces the current signal mask by the one pointed to by sigmask,
+then does the "select()" function, and then restores the original signal
+mask. 即,在执行 pselect() 函数的时候,会用 sigmask 指向的信号掩码来设置到当
+前进程的信号掩码中去,然后再执行"select()"操作,该操作返回后,再恢复当前进程
+的信号掩码为之前的值.
+
+The reason that pselect() is needed is that if one wants ot wait for either
+a signal or for a file descriptor to become ready, then an atomic test is
+needed to prevent race condition. (Suppose the signal handler sets a global
+flag and returns. Then a test of this global flag followed by a call of
+select() could hang indefinitely if the signal arrived just after the test
+but just before the call. By contrast, pselect() allows one to first block
+signals, handle the signals that have come in, then call pselect() with the
+desired sigmask, avoiding the race.) 即,在执行 pselect() 函数之前先阻塞某个
+信号,然后在pselect()函数的sigmask参数中取消该信号的阻塞,则在pselect()函数阻
+塞期间,该信号可以被递送,pselect()函数被中断, errno 设为 EINTR, 当pselect()
+函数返回时,会恢复原先的信号掩码,重新阻塞那个信号,则pselect()函数返回后,在对
+刚才的信号处理过程中,那个信号是阻塞的,一直阻塞到再次调用pselect()函数为止.
+
+对于上述场景,书中举例描述如下:
+With regard to the second point, consider the following example. Our
+program's signal handler for SIGINT just sets the global intr_flag and
+returns. If our process is blocked in a call to select(), the return from
+the signal handler causes the function to return with errno set to EINTR.
+But when select() is called, the code looks like the following:
+    if (intr_flag)
+        handle_intr();      /* handle the signal */
+    if ((nready = select( ... )) < 0) {
+        if (errno == EINTR) {
+            if (intr_flag)
+                handle_intr();
+        }
+        ...
+    }
+The problem is that between the test of intr_flag and the call to select(),
+if the signal occurs, it will be lost if select() blocks forever.即,正在判
+断 intr_flag 是否为真时,如果又接收到 SIGINT 信号,该信号的处理函数再次设置
+intr_flag的值,然后返回到这里来,然后接着调用 select() 函数,如果select()函数
+永远阻塞了,那么不会再调用handle_intr()函数来处理上次递送的 SIGINT 信号.
+
+With pselect(), we can now code this example reliable as
+    sigset_t newmask, oldmask, zeromask;
+
+    sigemptyset(&zeromask);
+    sigemptyset(&newmask);
+    sigaddset(&newmask, SIGINT);
+
+    sigprocmask(SIG_BLOCK, &newmask, &oldmask);     /* block SIGINT */
+    if (intr_flag)
+        handle_intr();      /* handle the signal */
+    if ((nready = pselect( ..., &zeromask)) < 0) {
+        if (errno == EINTR) {
+            if (intr_flag)
+                handle_intr();
+        }
+        ...
+    }
+Before testing the intr_flag variable, we block SIGINT. When pselect() is
+called, it replaces the signal mask of the process with an empty set (i.e.,
+zeromask) and then checks the descriptors, possibly going to sleep. But
+when pselect() returns, the signal mask of the process is reset to its
+value before pselect() was called (i.e., SIGINT is blocked).
+即,在调用 pselect() 函数之前,先阻塞SIGINT信号,然后调用pselect()函数,由于
+pselect()会将传入的信号掩码集设置到当前进程的信号掩码,而上面传入的是一个空
+的信号掩码集,所以SIGINT就不再阻塞,当进程接收到SIGINT信号时,pselect()函数会
+报错返回, errno被设为EINTR,接着判断intr_flag的值.由于pselect()函数返回后,会
+恢复原先的信号掩码,则此时SIGINT又被阻塞,如果在判断intr_flag的值时,进程接收
+到了SIGINT信号,则该信号会被阻塞,当再次调用pselect()函数时,取消了SIGINT的阻
+塞,进程接收了之前被阻塞的SIGINT信号,pselect()又被中断.这个过程中,pselect()
+不会丢失对 SIGINT 的处理,不存在条件竞争的情况.
