@@ -339,3 +339,12 @@ int Select(int nfds, fd_set *readfds, fd_set *writefds,
         err_sys("select error");
     return n;   /* can return 0 on timeout */
 }
+
+int Poll(struct pollfd *fds, unsigned long nfds, int timeout)
+{
+    int nready;
+
+    if ((nready = poll(fds, nfds, timeout)) < 0)
+        err_sys("poll error");
+    return nready;
+}

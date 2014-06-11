@@ -56,3 +56,9 @@ The three SHUT_xxx names are defined by the POSIX specification. Typical
 values for the howto argument that you will encounter will be 0 (close the
 read half), 1 (close the write half), and 2 (close the read and the write
 half).
+
+书中Exercises 6.6提到: Why would an application call shutdown() with an
+argument of SHUT_RDWR instead of just calling close()?
+书中答案说是: shutdown() with SHUT_WR or SHUT_RDWR always sends a FIN,
+while close() sends a FIN only if the descriptor reference count is 1
+when close() is called.

@@ -1,0 +1,14 @@
+Exercises 6.2. When describling the conditions for which select() returns
+"writable" in Section 6.3, why did we need the qualifier that the socket
+had to be nonblocking for a write operation to return a positive value?
+
+Answer: If select() tells us that the socket is writable, the socket send
+buffer has room for 8,192 bytes, but when we call write() for this blocking
+socket with a buffer length of 8,193 bytes, write() can block, waiting for
+room for the final byte. Read operations on a blocking socket will always
+return a short count if some data is available, but write operations on a
+blocking socket will block until all the data can be accepted by the kernel.
+Therefore, when using select() to test for writability, we must set the
+socket to nonblocking to avoid blocking.
+即,当write()函数传入的buffer字符数大于socket发送缓冲区的长度时,阻塞型的
+write()能够阻塞来等待socket发送缓冲区有空间来接收write()函数多出来的字符.

@@ -2,6 +2,7 @@
 #define L_COMMON_H_
 
 #include <stdio.h>          /* FILE */
+#include <poll.h>           /* poll() */
 
 #define MAXLINE     1024
 #define LISTENQ     1024    /* 2nd argument to listen() */
@@ -34,6 +35,7 @@ void Inet_pton(int, const char *, void *);
 const char *Inet_ntop(int, const void *, char *, socklen_t);
 
 int Select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
+int Poll(struct pollfd *, unsigned long, int);
 
 ssize_t readn(int, void *, size_t);
 ssize_t Readn(int, void *, size_t);

@@ -1,0 +1,35 @@
+There are five different models for I/O provided by Unix:
+    > Blocking
+    > Nonblocking
+    > I/O multiplexing
+    > Signal-driven I/O
+    > Asynchronous I/O
+The default is blocking I/O, which is also the most commonly used.
+
+The most commonly used function for I/O multiplexing is select(). We tell
+the select() function what descriptors we are interested in (for reading,
+writing, and exceptions), the maximum amount of time to wait, and the
+maximum descriptor number (plus one). Most calls to select() specify
+readability, and we noted that the only exception condition when dealing
+with sockets is the arrival of out-of-band data. Since select() provides a
+time limit on how long a function blocks, we will use this feature to place
+a time limit on an input operation.
+
+We used our echo client in a batch mode using select() and discovered that
+even though the end of the user input is encountered, data can still be in
+the pipe to or from the server. To handle this scenario requires the
+shutdown() function, and it lets us take advantage of TCP's half-close
+feature.
+
+The dangers of mixing stdio buffering with select() caused us to produce
+versions of the echo client and server that operated on buffers instead
+of lines.
+
+POSIX defines the function pselect(), which increases the time precision
+from microseconds to nanoseconds and takes a new argument that is a
+pointer to a signal set. This lets us avoid race conditions when signals
+are being caught.
+
+The poll() function from System V provides functionality similar to
+select() and provides additional information on STREAMS devices. POSIX
+requires both select() and poll(), but the former is used more often.

@@ -1,0 +1,22 @@
+Exercises 6.1. We said that a descriptor set can be assigned to another
+descriptor set across an equals sign in C. How it this done if a descriptor
+set is an array of integers? (Hint: Look at your system's <sys/select.h>
+or <sys/types.h> header.)
+
+Answer: The array of integers is contained within a structure and C allows
+structures to be assigned across an equals sign.
+查看 Linux 的 "/usr/include/sys/select.h" 头文件,里面对 fd_set 的定义如下:
+/* fd_set for select and pselect.  */
+typedef struct
+  {
+    /* XPG4.2 requires this member name.  Otherwise avoid the name
+       from the global namespace.  */
+#ifdef __USE_XOPEN
+    __fd_mask fds_bits[__FD_SETSIZE / __NFDBITS];
+# define __FDS_BITS(set) ((set)->fds_bits)
+#else
+    __fd_mask __fds_bits[__FD_SETSIZE / __NFDBITS];
+# define __FDS_BITS(set) ((set)->__fds_bits)
+#endif
+  } fd_set;
+即,确实将 fd_set 定义为结构体.

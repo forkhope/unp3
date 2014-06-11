@@ -90,6 +90,15 @@ Figure 6.24 shows the possible values for the timeout argument.
 The constant INFTIM is defined to be a negative value. If the system does
 not provide a timer with millisecond accuracy, the value is rounded up to
 the nearest supported value.
+    The POSIX specification requires that INFTIM be defined by including
+    <poll.h>, but many systems still define it in <sys/stropts.h>.
+注意: Linux中,即使包含这两个头文件,也不会引入"INFTIM"的声明."man poll"手册
+的"NOTES"小节提到: Some implementations define the nonstandard constant
+INFTIM with the value -1 for use as a timeout for poll(). This constant is
+not provided in glibc. 此时,如果想要不超时的话,只要提供一个为负的timeout参
+数即可. Specifying a timeout of zero causes poll() to return immediately,
+even if no file descriptors are ready. 查看"Open Group 7"在线网址,它也并没
+有定义 "INFTIM" 这个宏,所以使用 "-1" 来代替它是最好的.
 
 The return value from poll() is -1 if an error occurred, 0 if no
 descriptors are ready before the timer expires, otherwise it is the number
